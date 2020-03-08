@@ -10,19 +10,19 @@ CM0102Loader can patch the .exe in memory and changes no other files - so there 
 
 ## Options
 When you run CM0102Loader.exe for the first time it will create a CM0102Loader.ini file with the following default options:
-<br />
-Year = 2001<br />
-SpeedMultiplier = 4<br />
-CurrencyMultiplier = 1.0<br />
-ColouredAttributes = true<br />
-DisableUnprotectedContracts = true<br />
-HideNonPublicBids = true<br />
-IncreaseToSevenSubs = true<br />
-RemoveForeignPlayerLimit = false<br />
-NoWorkPermits = false<br />
-ChangeTo1280x800 = false<br />
-AutoLoadPatchFiles = false<br />
-<br />
+```
+Year = 2001
+SpeedMultiplier = 4
+CurrencyMultiplier = 1.0
+ColouredAttributes = true
+DisableUnprotectedContracts = true
+HideNonPublicBids = true
+IncreaseToSevenSubs = true
+RemoveForeignPlayerLimit = false
+NoWorkPermits = false
+ChangeTo1280x800 = false
+AutoLoadPatchFiles = false
+```
 It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow Cm0102 Window Close, Idle Sensitivity and things to make it more portable (remove memory check, location check, etc)
 
 AutoLoadPatcheFiles, when set to true, will look for .patch files in your CM0102 directory and apply those too. A good source of .patch files can be found at:
