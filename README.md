@@ -29,6 +29,6 @@ It also applies some patches by default that you cannot manipulate (these are Di
 The AutoLoadPatchFiles option, when set to true, will look for .patch files in your CM0102 directory and apply those too. A good source of .patch files can be found at:
 https://github.com/nckstwrt/CM0102Patcher/blob/master/MiscPatches.zip (click Download)
 
-DataDirectory allows you to set another directory for CM0102 to load its data from. This is normally the Data directory. But you can now copy this directory in the same folder, [b]ensuring the new name has no spaces[/b] (e.g. Oct2019), then maybe copy over the October 2019 update from www.champman0102.co.uk into the new directory, then set DataDirectory = Oct2019 ([b]no[/b] quotes (") needed) and then it will load using the 2019 data.
+DataDirectory allows you to set another directory for CM0102 to load its data from. This is normally the Data directory. But you can now copy this directory in the same folder, **ensuring the new name has no spaces** (e.g. Oct2019), then maybe copy over the October 2019 update from www.champman0102.co.uk into the new directory, then set DataDirectory = Oct2019 (**no** quotes (") needed) and then it will load using the 2019 data.
 
 This Loader was built with Visual C++ 6 so that it can run on Win95 as easy as it does on Win10. Which also should work on things like PlayOnMac, etc.
