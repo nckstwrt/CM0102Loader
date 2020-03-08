@@ -29,6 +29,7 @@ public:
 		RemoveForeignPlayerLimit = false;
 		NoWorkPermits = false;
 		ChangeTo1280x800 = false;
+		AutoLoadPatchFiles = false;
 		NoCD = false;
 	}
 
@@ -84,6 +85,11 @@ public:
 					ChangeTo1280x800 = (toupper(value[0]) == 'T');
 				}
 				else
+				if (stricmp(att, "AutoLoadPatchFiles") == 0)
+				{
+					AutoLoadPatchFiles = (toupper(value[0]) == 'T');
+				}
+				else
 				if (stricmp(att, "NoCD") == 0)
 				{
 					NoCD = (toupper(value[0]) == 'T');
@@ -117,6 +123,7 @@ public:
 			fprintf(fout, "RemoveForeignPlayerLimit = false\n");
 			fprintf(fout, "NoWorkPermits = false\n");
 			fprintf(fout, "ChangeTo1280x800 = false\n");
+			fprintf(fout, "AutoLoadPatchFiles = false\n");
 			fclose(fout);
 		}
 	}
@@ -131,6 +138,7 @@ public:
 	bool RemoveForeignPlayerLimit;
 	bool NoWorkPermits;
 	bool ChangeTo1280x800;
+	bool AutoLoadPatchFiles;
 	bool NoCD;
 };
 
@@ -248,6 +256,53 @@ void YearChanger(HANDLE hProcess, WORD year)
 void SpeedHack(HANDLE hProcess, double multiplier)
 {
 	WriteWord(hProcess, 0x5472ce, (WORD)((10000.0 / multiplier)+0.5));
+}
+
+void AutoLoadPatchFiles(HANDLE hProcess)
+{
+	char lineBuffer[1000];
+	char part1[100], part2[100], part3[100];
+	WIN32_FIND_DATA findData;
+	HANDLE hFind = FindFirstFile("*.patch", &findData);
+
+	if (hFind != INVALID_HANDLE_VALUE)
+	{
+		do
+		{
+			FILE *fin = fopen(findData.cFileName, "rt");
+			if (fin != NULL)
+			{
+				int bytePtr = 0;
+				int bytesRead;
+				
+				while (true)
+				{
+					bytesRead = fread(&lineBuffer[bytePtr], 1, 1, fin);
+					if (bytesRead == 0)
+						break;
+					if (lineBuffer[bytePtr] == 0xa)
+					{
+						lineBuffer[bytePtr] = 0;
+						if (bytePtr > 0 && lineBuffer[0] >= '0' && lineBuffer[0] <= '9')
+						{
+							if (sscanf(lineBuffer, "%s %s %s\n", part1, part2, part3) == 3)
+							{
+								DWORD addr = strtol(part1, NULL, 16);
+								BYTE value = (BYTE)strtol(part3, NULL, 16);
+								WriteByte(hProcess, addr, value);
+							}
+						}
+						bytePtr = 0;
+					}
+					else
+						bytePtr++;
+				}
+
+				fclose(fin);
+			}
+		} while (FindNextFile(hFind, &findData) != 0);
+		FindClose(hFind);
+	}
 }
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -438,6 +493,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				// No CD
 				if (settings.NoCD)
 					ApplyPatch(pi.hProcess, nocd, sizeof(nocd)/sizeof(HexPatch*));
+
+				if (settings.AutoLoadPatchFiles)
+					AutoLoadPatchFiles(pi.hProcess);
 
 				// Start Game
 				ResumeThread(pi.hThread);
