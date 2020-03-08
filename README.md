@@ -5,7 +5,7 @@ Loader for Championship Manager 01/02
 https://github.com/nckstwrt/CM0102Loader/releases
 
 ## Description
-CM0102Loader is an .exe file you put in the same directory as your CM0102.exe (only works with 3.9.68 version).
+CM0102Loader is an .exe file you put in the same directory as your CM0102.exe (only works with a clean 3.9.68 version).
 CM0102Loader can patch the .exe in memory and changes no other files - so there will be no permanent changes.
 
 ## Options
