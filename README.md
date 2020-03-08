@@ -23,7 +23,7 @@ NoWorkPermits = false
 ChangeTo1280x800 = false
 AutoLoadPatchFiles = false
 ```
-It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow Cm0102 Window Close, Idle Sensitivity and things to make it more portable (remove memory check, location check, etc)
+It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow CM0102 Window Close, Idle Sensitivity and things to make CM0102 more portable (remove memory check, location check, etc))
 
-AutoLoadPatcheFiles, when set to true, will look for .patch files in your CM0102 directory and apply those too. A good source of .patch files can be found at:
+The AutoLoadPatcheFiles option, when set to true, will look for .patch files in your CM0102 directory and apply those too. A good source of .patch files can be found at:
 https://github.com/nckstwrt/CM0102Patcher/blob/master/MiscPatches.zip (click Download)
