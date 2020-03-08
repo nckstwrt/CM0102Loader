@@ -25,7 +25,7 @@ AutoLoadPatchFiles = false
 ```
 It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow CM0102 Window Close, Idle Sensitivity and things to make CM0102 more portable (remove memory check, location check, etc))
 
-The AutoLoadPatcheFiles option, when set to true, will look for .patch files in your CM0102 directory and apply those too. A good source of .patch files can be found at:
+The AutoLoadPatchFiles option, when set to true, will look for .patch files in your CM0102 directory and apply those too. A good source of .patch files can be found at:
 https://github.com/nckstwrt/CM0102Patcher/blob/master/MiscPatches.zip (click Download)
 
 This Loader was built with Visual C++ 6 so that it can run on Win95 as easy as it does on Win10. Which also should work on things like PlayOnMac, etc.
