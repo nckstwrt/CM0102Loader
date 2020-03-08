@@ -30,6 +30,7 @@ public:
 		NoWorkPermits = false;
 		ChangeTo1280x800 = false;
 		AutoLoadPatchFiles = false;
+		strcpy(DataDirectory, "data");
 		NoCD = false;
 	}
 
@@ -90,6 +91,11 @@ public:
 					AutoLoadPatchFiles = (toupper(value[0]) == 'T');
 				}
 				else
+				if (stricmp(att, "DataDirectory") == 0)
+				{
+					strcpy(DataDirectory, value);
+				}
+				else
 				if (stricmp(att, "NoCD") == 0)
 				{
 					NoCD = (toupper(value[0]) == 'T');
@@ -124,6 +130,7 @@ public:
 			fprintf(fout, "NoWorkPermits = false\n");
 			fprintf(fout, "ChangeTo1280x800 = false\n");
 			fprintf(fout, "AutoLoadPatchFiles = false\n");
+			fprintf(fout, "DataDirectory = data\n");
 			fclose(fout);
 		}
 	}
@@ -139,6 +146,7 @@ public:
 	bool NoWorkPermits;
 	bool ChangeTo1280x800;
 	bool AutoLoadPatchFiles;
+	char DataDirectory[100];
 	bool NoCD;
 };
 
@@ -165,6 +173,12 @@ void WriteDouble(HANDLE hProcess, DWORD addr, double d)
 {
 	DWORD bytesWritten;
 	WriteProcessMemory(hProcess, (void*)(0x400000+addr), &d, sizeof(double), &bytesWritten);
+}
+
+void WriteString(HANDLE hProcess, DWORD addr, const char *szString)
+{
+	DWORD bytesWritten;
+	WriteProcessMemory(hProcess, (void*)(0x400000+addr), (void*)szString, strlen(szString)+1, &bytesWritten);
 }
 
 void ApplyPatch(HANDLE hProcess, HexPatch* patch[], int count)
@@ -303,6 +317,21 @@ void AutoLoadPatchFiles(HANDLE hProcess)
 		} while (FindNextFile(hFind, &findData) != 0);
 		FindClose(hFind);
 	}
+}
+
+void ChangeDataDirectory(HANDLE hProcess, const char *szDataDirectory)
+{
+	if (GetFileAttributes(szDataDirectory) == FILE_ATTRIBUTE_DIRECTORY)
+	{
+		WriteString(hProcess, 0x5919A8, szDataDirectory);
+		WriteDWord(hProcess, 0x1681F9, 0x9919A8);
+		WriteDWord(hProcess, 0x16820E, 0x9919A8);
+		WriteDWord(hProcess, 0x50BC94, 0x9919A8);
+		WriteDWord(hProcess, 0x50BCB0, 0x9919A8);
+		WriteDWord(hProcess, 0x50BD20, 0x9919A8);
+	}
+	else
+		MessageBox(0, "Failed to change data directory.\r\nPlease ensure DataDirectory is set to a directory without spaces in the name.", "CM0102Loader Error", MB_ICONEXCLAMATION);
 }
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -494,8 +523,12 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				if (settings.NoCD)
 					ApplyPatch(pi.hProcess, nocd, sizeof(nocd)/sizeof(HexPatch*));
 
+				// Load any patch files
 				if (settings.AutoLoadPatchFiles)
 					AutoLoadPatchFiles(pi.hProcess);
+
+				if (stricmp(settings.DataDirectory, "data") != 0)
+					ChangeDataDirectory(pi.hProcess, settings.DataDirectory);
 
 				// Start Game
 				ResumeThread(pi.hThread);
