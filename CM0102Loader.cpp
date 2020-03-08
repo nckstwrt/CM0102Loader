@@ -134,7 +134,32 @@ public:
 	bool NoCD;
 };
 
-void ApplyPatch(unsigned char *buffer, HexPatch* patch[], int count)
+
+void WriteByte(HANDLE hProcess, DWORD addr, BYTE b)
+{
+	DWORD bytesWritten;
+	WriteProcessMemory(hProcess, (void*)(0x400000+addr), &b, 1, &bytesWritten);
+}
+
+void WriteWord(HANDLE hProcess, DWORD addr, WORD w)
+{
+	DWORD bytesWritten;
+	WriteProcessMemory(hProcess, (void*)(0x400000+addr), &w, 2, &bytesWritten);
+}
+
+void WriteDWord(HANDLE hProcess, DWORD addr, DWORD dw)
+{
+	DWORD bytesWritten;
+	WriteProcessMemory(hProcess, (void*)(0x400000+addr), &dw, 4, &bytesWritten);
+}
+
+void WriteDouble(HANDLE hProcess, DWORD addr, double d)
+{
+	DWORD bytesWritten;
+	WriteProcessMemory(hProcess, (void*)(0x400000+addr), &d, sizeof(double), &bytesWritten);
+}
+
+void ApplyPatch(HANDLE hProcess, HexPatch* patch[], int count)
 {
 	char hexTemp[3];
 	hexTemp[2] = 0;
@@ -146,7 +171,7 @@ void ApplyPatch(unsigned char *buffer, HexPatch* patch[], int count)
 			hexTemp[0] = patch[i]->hex[j]; 
 			hexTemp[1] = patch[i]->hex[j+1]; 
 			BYTE byte = (BYTE)strtol(hexTemp, NULL, 16);
-			buffer[patch[i]->offset+(j/2)] = byte;
+			WriteByte(hProcess, patch[i]->offset+(j/2), byte);
 		}
 	}
 }
@@ -159,7 +184,7 @@ void FreePatch(HexPatch* patch[], int count)
 	}
 }
 
-void YearChanger(unsigned char *buffer, short year)
+void YearChanger(HANDLE hProcess, WORD year)
 {
 	int i;
     int startYear[] = { 0x13386, 0x140e5, 0x224f0, 0x44270, 0x44297, 0x55830, 0x5583d, 0x5f4ee, 0x5f97c, 0x5f981, 0x16fc63, /*0x18b387,*/ 0x1aee53, 0x1bab86, 0x1bac32, 0x1BACE7, 0x1bb6ab, 0x1BC2C1, 0x1BC420, 0x1bc8b2, 0x1BF0AE, 0x1C070E, 0x1c3068, 0x1db242, 0x2673c3, 0x267495, 0x267582, 0x26766d, 0x26775a, 0x267829, 0x2678f8, 0x2679c6, 0x267aa1, 0x267b81, 0x267c6d, 0x267d5a, 0x267e55, 0x267f50, 0x268043, 0x268149, 0x268236, 0x268324, 0x268411, 0x2684ff, 0x2685ed, 0x2686bc, 0x2687ac, 0x268899, 0x268987, 0x268a77, 0x268b65, 0x268c54, 0x268d40, 0x268e2f, 0x268f1d, 0x26900b, 0x2690da, /*0x37d858,*/ 0x3d2410, 0x41b93d, 0x430591, 0x430598, 0x4305dc, 0x430a64, 0x430f8e, 0x430fb4, 0x43129a, 0x4312b4, 0x431608, 0x431622, 0x4318ad, 0x4318c6, 0x431b54, 0x431b6d, 0x431e66, 0x431e80, 0x4320b3, 0x4320cd, 0x432324, 0x432577, 0x43290d, 0x433055, 0x43339d, 0x4336eb, 0x433c84, 0x433f8e, 0x434382, 0x43475d, 0x434aad, 0x434dfd, 0x435297, 0x435c39, 0x435fca, 0x4362EF, 0x43668e, 0x436a55, 0x436d68, 0x4371a5, 0x4371d5, 0x4374e9, 0x43805d, 0x438357, 0x43869f, 0x456ce0, 0x4fddd2, 0x5041f3, 0x5059B9, 0x5291B4 };
@@ -173,84 +198,58 @@ void YearChanger(unsigned char *buffer, short year)
     int startYearPlus9[] = { 0x135d89, 0x135df8, 0x3A3D64, 0x3A3FD1, 0x3A4224, 0x3A4844, 0x3A4CB4, 0x3A4F68, 0x3A4FA1 };
 
 	for (i = 0; i < sizeof(startYear)/sizeof(int); i++)
-		*((short*)&buffer[startYear[i]]) = year;
+		WriteWord(hProcess, startYear[i], year);
 
 	for (i = 0; i < sizeof(startYearMinus19)/sizeof(int); i++)
-		*((short*)&buffer[startYearMinus19[i]]) = year-19;
+		WriteWord(hProcess, startYearMinus19[i], year-19);
 
 	for (i = 0; i < sizeof(startYearMinus3)/sizeof(int); i++)
-		*((short*)&buffer[startYearMinus3[i]]) = year-3;
+		WriteWord(hProcess, startYearMinus3[i], year-3);
 
 	for (i = 0; i < sizeof(startYearMinus2)/sizeof(int); i++)
-		*((short*)&buffer[startYearMinus2[i]]) = year-2;
+		WriteWord(hProcess, startYearMinus2[i], year-2);
 
 	for (i = 0; i < sizeof(startYearMinus1)/sizeof(int); i++)
-		*((short*)&buffer[startYearMinus1[i]]) = year-1;
+		WriteWord(hProcess, startYearMinus1[i], year-1);
 
 	for (i = 0; i < sizeof(startYearPlus1)/sizeof(int); i++)
-		*((short*)&buffer[startYearPlus1[i]]) = year+1;
+		WriteWord(hProcess, startYearPlus1[i], year+1);
 
 	for (i = 0; i < sizeof(startYearPlus2)/sizeof(int); i++)
-		*((short*)&buffer[startYearPlus2[i]]) = year+2;
+		WriteWord(hProcess, startYearPlus2[i], year+2);
 
 	for (i = 0; i < sizeof(startYearPlus3)/sizeof(int); i++)
-		*((short*)&buffer[startYearPlus3[i]]) = year+3;
+		WriteWord(hProcess, startYearPlus3[i], year+3);
 
 	for (i = 0; i < sizeof(startYearPlus9)/sizeof(int); i++)
-		*((short*)&buffer[startYearPlus9[i]]) = year+9;
+		WriteWord(hProcess, startYearPlus9[i], year+9);
 
 	// Special
-    short mod4year = ((year + 1) - ((year - 1) % 4));
-	*((short*)&buffer[0x18B387]) = mod4year;
+    WORD mod4year = ((year + 1) - ((year - 1) % 4));
+	WriteWord(hProcess, 0x18B387, mod4year);
 
     // Special 2 (the calc for season selection can cause England 18/09 without this)
-	*((BYTE*)&buffer[0x41e9ca]) = (BYTE)0x64;
+	WriteByte(hProcess, 0x41e9ca, 0x64);
 
     // Special 3 - Need to fix Euro for 2019
     if ((year % 4) == 3)
-		*((short*)&buffer[0x1f9c0a]) = year - 7;
+		WriteWord(hProcess, 0x1f9c0a, year - 7);
 
     // Special 4 - World Cup - Oceania League Fix - So 2012, etc will work
     if ((year % 4) == 0)
     {
-		*((short*)&buffer[0x5182dc]) = year;
-		*((BYTE*)&buffer[0x518473]) = (BYTE)0xeb;
-		*((short*)&buffer[0x52036e]) = year;
-		*((BYTE*)&buffer[0x5204b8]) = (BYTE)0xeb;
+		WriteWord(hProcess, 0x5182dc, year);
+		WriteByte(hProcess, 0x518473, 0xeb);
+		WriteWord(hProcess, 0x52036e, year);
+		WriteByte(hProcess, 0x5204b8, 0xeb);
     }
 }
 
-void NoCDPatch(unsigned char *buf, DWORD size)
+void SpeedHack(HANDLE hProcess, double multiplier)
 {
-	BYTE pattern[] = { 0x75, 0x00, 0x6a, 0x65, 0x6a, 0x78, 0x6a, 0x65, 0x6a, 0x2e, 0x6a, 0x00, 0x6a, 0x30 };
-	int patternPtr = 0;
-
-	for (DWORD i = 0; i < size; i++)
-	{
-		if (buf[i] == pattern[patternPtr] || pattern[patternPtr] == 0)
-		{
-			patternPtr++;
-			if (patternPtr == sizeof(pattern))
-			{
-				buf[(i - sizeof(pattern))+1] = 0x90;
-				buf[(i - sizeof(pattern))+2] = 0x90;
-				buf[(i - sizeof(pattern))+20] = 0x0;
-				buf[(i - sizeof(pattern))+21] = 0x6a;
-				buf[(i - sizeof(pattern))+22] = 0x2a;
-				patternPtr = 0;
-			}
-		}
-		else
-			patternPtr = 0;
-	}
+	WriteWord(hProcess, 0x5472ce, (WORD)((10000.0 / multiplier)+0.5));
 }
 
-void SpeedHack(unsigned char *buffer, double multiplier)
-{
-	*((short*)&buffer[0x5472ce]) = (short)((10000.0 / multiplier)+0.5);
-}
-
-//int main(int argc, char *argv[])
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	Settings settings;
@@ -327,6 +326,24 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	HexPatch* comphistory_datecalcpatch[] = { new HexPatch(0x139AE9, "E912D4420090"), new HexPatch(0x566F00, "8B35D423AE0060668B15863341006681EAD10731C06601560883C61A4039C875F461E9C82BBDFF") };
 	HexPatch* noworkpermits[] = { new HexPatch(0x4c75f1, "eb") };
 	HexPatch* currencyinflationpatch[] = { new HexPatch(0x566A00, "FF74240468146A96005589E583E4F8E9E28DADFFDD05C1969100DC0DB89CAD00DD1DB89CAD0083C404C3"), new HexPatch(0x3F7F0, "E90B72520090") };
+	HexPatch* nocd[] = { new HexPatch(78299, "9090"), new HexPatch(78318, "00"), new HexPatch(78320, "2a"), new HexPatch(273164, "9090"), new HexPatch(273183, "00"), new HexPatch(273185, "2a"), new HexPatch(279927, "9090"), 
+							new HexPatch(279946, "00"), new HexPatch(279948, "2a"), new HexPatch(811034, "9090"), new HexPatch(811053, "00"), new HexPatch(811055, "2a"), new HexPatch(815255, "9090"), new HexPatch(815274, "00"), 
+							new HexPatch(815276, "2a"), new HexPatch(1398031, "9090"), new HexPatch(1398050, "00"), new HexPatch(1398052, "2a"), new HexPatch(1680323, "9090"), new HexPatch(1680342, "00"), new HexPatch(1680344, "2a"),
+							new HexPatch(1744229, "9090"), new HexPatch(1744248, "00"), new HexPatch(1744250, "2a"), new HexPatch(1843238, "9090"), new HexPatch(1843257, "00"), new HexPatch(1843259, "2a"), 
+							new HexPatch(2070522, "9090"), new HexPatch(2070541, "00"), new HexPatch(2070543, "2a"), new HexPatch(2077823, "9090"), new HexPatch(2077842, "00"), new HexPatch(2077844, "2a"), 
+							new HexPatch(2270927, "9090"), new HexPatch(2270946, "00"), new HexPatch(2270948, "2a"), new HexPatch(2677825, "9090"), new HexPatch(2677844, "00"), new HexPatch(2677846, "2a"), 
+							new HexPatch(3313801, "9090"), new HexPatch(3313820, "00"), new HexPatch(3313822, "2a"), new HexPatch(3581251, "9090"), new HexPatch(3581270, "00"), new HexPatch(3581272, "2a"), 
+							new HexPatch(3693402, "9090"), new HexPatch(3693421, "00"), new HexPatch(3693423, "2a"), new HexPatch(3782082, "9090"), new HexPatch(3782101, "00"), new HexPatch(3782103, "2a"), 
+							new HexPatch(3822537, "9090"), new HexPatch(3822556, "00"), new HexPatch(3822558, "2a"), new HexPatch(3931588, "9090"), new HexPatch(3931607, "00"), new HexPatch(3931609, "2a"), 
+							new HexPatch(4087868, "9090"), new HexPatch(4087887, "00"), new HexPatch(4087889, "2a"), new HexPatch(4155345, "9090"), new HexPatch(4155364, "00"), new HexPatch(4155366, "2a"), 
+							new HexPatch(4358574, "9090"), new HexPatch(4358593, "00"), new HexPatch(4358595, "2a"), new HexPatch(4366398, "9090"), new HexPatch(4366417, "00"), new HexPatch(4366419, "2a"), 
+							new HexPatch(4369092, "9090"), new HexPatch(4369111, "00"), new HexPatch(4369113, "2a"), new HexPatch(4383580, "9090"), new HexPatch(4383599, "00"), new HexPatch(4383601, "2a"), 
+							new HexPatch(4503968, "9090"), new HexPatch(4503987, "00"), new HexPatch(4503989, "2a"), new HexPatch(4561630, "9090"), new HexPatch(4561649, "00"), new HexPatch(4561651, "2a"), 
+							new HexPatch(4568752, "9090"), new HexPatch(4568771, "00"), new HexPatch(4568773, "2a"), new HexPatch(4621323, "9090"), new HexPatch(4621342, "00"), new HexPatch(4621344, "2a"), 
+							new HexPatch(4800037, "9090"), new HexPatch(4800056, "00"), new HexPatch(4800058, "2a"), new HexPatch(4919092, "9090"), new HexPatch(4919111, "00"), new HexPatch(4919113, "2a"), 
+							new HexPatch(4963058, "9090"), new HexPatch(4963077, "00"), new HexPatch(4963079, "2a"), new HexPatch(5256098, "9090"), new HexPatch(5256117, "00"), new HexPatch(5256119, "2a"), 
+							new HexPatch(5296550, "9090"), new HexPatch(5296569, "00"), new HexPatch(5296571, "2a"), new HexPatch(5383934, "9090"), new HexPatch(5383953, "00"), new HexPatch(5383955, "2a") };
+	
 
 	PROCESS_INFORMATION pi = { 0 };
 	STARTUPINFO si = { 0 };
@@ -344,45 +361,48 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
   
 		if (bProcess)
 		{
-			// Let's grab 7mb worth
-			DWORD size = 7 * 1024 * 1024;
-			unsigned char *buffer = new unsigned char[size];
 			DWORD bytesRead, old;
+			BYTE versionBuf[7];
+			DWORD size = 8 * 1024 * 1024;
+
+			// Unprotect 8mb of memory ready for writing
 			VirtualProtectEx(pi.hProcess, (void*)0x400000, size, PAGE_EXECUTE_READWRITE, &old);
-			ReadProcessMemory(pi.hProcess, (void*)0x400000, buffer, size, &bytesRead);
+
+			// Read the version
+			ReadProcessMemory(pi.hProcess, (void*)(0x400000+0x6D4394), versionBuf, 7, &bytesRead);
 
 			// Check if 3.9.68
-			if (memcmp(&buffer[0x6D4394], "3.9.68\0", 7) == 0)
+			if (memcmp(versionBuf, "3.9.68\0", 7) == 0)
 			{
 				settings.ReadSettings();
 
 				// Apply Patches
-				ApplyPatch(buffer, disablecdremove, sizeof(disablecdremove)/sizeof(HexPatch*));
-				ApplyPatch(buffer, disablesplashscreen, sizeof(disablesplashscreen)/sizeof(HexPatch*));
-				ApplyPatch(buffer, changeregistrylocation, sizeof(changeregistrylocation)/sizeof(HexPatch*));
-				ApplyPatch(buffer, memorycheckfix, sizeof(memorycheckfix)/sizeof(HexPatch*));
-				ApplyPatch(buffer, allowclosewindow, sizeof(allowclosewindow)/sizeof(HexPatch*));
-				ApplyPatch(buffer, removemutexcheck, sizeof(removemutexcheck)/sizeof(HexPatch*));
-				ApplyPatch(buffer, idlesensitivity, sizeof(idlesensitivity)/sizeof(HexPatch*));
-				ApplyPatch(buffer, idlesensitivitytransferscreen, sizeof(idlesensitivitytransferscreen)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, disablecdremove, sizeof(disablecdremove)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, disablesplashscreen, sizeof(disablesplashscreen)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, changeregistrylocation, sizeof(changeregistrylocation)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, memorycheckfix, sizeof(memorycheckfix)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, allowclosewindow, sizeof(allowclosewindow)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, removemutexcheck, sizeof(removemutexcheck)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, idlesensitivity, sizeof(idlesensitivity)/sizeof(HexPatch*));
+				ApplyPatch(pi.hProcess, idlesensitivitytransferscreen, sizeof(idlesensitivitytransferscreen)/sizeof(HexPatch*));
 				
 				if (settings.ColoredAttributes)
-					ApplyPatch(buffer, colouredattributes, sizeof(colouredattributes)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, colouredattributes, sizeof(colouredattributes)/sizeof(HexPatch*));
 
 				if (settings.DisableUnprotectedContracts)
-					ApplyPatch(buffer, disableunprotectedcontracts, sizeof(disableunprotectedcontracts)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, disableunprotectedcontracts, sizeof(disableunprotectedcontracts)/sizeof(HexPatch*));
 
 				if (settings.HideNonPublicBids)
-					ApplyPatch(buffer, hideprivatebids, sizeof(hideprivatebids)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, hideprivatebids, sizeof(hideprivatebids)/sizeof(HexPatch*));
 
 				if (settings.IncreaseToSevenSubs)
-					ApplyPatch(buffer, sevensubs, sizeof(sevensubs)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, sevensubs, sizeof(sevensubs)/sizeof(HexPatch*));
 
 				if (settings.RemoveForeignPlayerLimit)
-					ApplyPatch(buffer, remove3playerlimit, sizeof(remove3playerlimit)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, remove3playerlimit, sizeof(remove3playerlimit)/sizeof(HexPatch*));
 
 				if (settings.NoWorkPermits)
-					ApplyPatch(buffer, noworkpermits, sizeof(noworkpermits)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, noworkpermits, sizeof(noworkpermits)/sizeof(HexPatch*));
 
 				if (settings.ChangeTo1280x800)
 				{
@@ -391,46 +411,39 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 						MessageBox(0, "CM0102.exe needs bkg1280_800.rgn, m800.mbr and g800.mbr in the Data directory to go to 1280x800\r\nLook for cmbg1280x800.zip for these files.", "CM0102Loader Error", MB_ICONEXCLAMATION);
 					}
 
-					ApplyPatch(buffer, tapanispacemaker, sizeof(tapanispacemaker)/sizeof(HexPatch*));
-					ApplyPatch(buffer, to1280x800, sizeof(to1280x800)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, tapanispacemaker, sizeof(tapanispacemaker)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, to1280x800, sizeof(to1280x800)/sizeof(HexPatch*));
 				}
 				
 				// Year Change
-				if (settings.Year != 2001)
+				if (settings.Year != 2001 && settings.Year != 0)
 				{
-					YearChanger(buffer, (short)settings.Year);
-					ApplyPatch(buffer, datecalcpatch, sizeof(datecalcpatch)/sizeof(HexPatch*));
-					ApplyPatch(buffer, datecalcpatchjumps, sizeof(datecalcpatchjumps)/sizeof(HexPatch*));
-					ApplyPatch(buffer, comphistory_datecalcpatch, sizeof(comphistory_datecalcpatch)/sizeof(HexPatch*));
+					YearChanger(pi.hProcess, (short)settings.Year);
+					ApplyPatch(pi.hProcess, datecalcpatch, sizeof(datecalcpatch)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, datecalcpatchjumps, sizeof(datecalcpatchjumps)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, comphistory_datecalcpatch, sizeof(comphistory_datecalcpatch)/sizeof(HexPatch*));
 				}
 
 				if (settings.SpeedMultiplier != 1)
 				{
-					SpeedHack(buffer, settings.SpeedMultiplier);
+					SpeedHack(pi.hProcess, settings.SpeedMultiplier);
 				}
 
 				if (settings.CurrencyMultiplier != 1.0)
 				{
-					ApplyPatch(buffer, currencyinflationpatch, sizeof(currencyinflationpatch)/sizeof(HexPatch*));
-					*((double*)&buffer[0x5196C1]) = settings.CurrencyMultiplier;
+					ApplyPatch(pi.hProcess, currencyinflationpatch, sizeof(currencyinflationpatch)/sizeof(HexPatch*));
+					WriteDouble(pi.hProcess, 0x5196C1, settings.CurrencyMultiplier);
 				}
 
 				// No CD
 				if (settings.NoCD)
-					NoCDPatch(buffer, size);
-
-				// Write back
-				DWORD bytesWritten;
-				WriteProcessMemory(pi.hProcess, (void*)0x400000, buffer, size, &bytesWritten);
+					ApplyPatch(pi.hProcess, nocd, sizeof(nocd)/sizeof(HexPatch*));
 
 				// Start Game
 				ResumeThread(pi.hThread);
 			}
 			else
 				MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot patch!", "CM0102Loader Error", MB_ICONEXCLAMATION);
-
-			// Free buffer
-			delete [] buffer;
 		}
 		else
 			MessageBox(0, "Failed to Create Process CM0102.exe", "CM0102Loader Error", MB_ICONEXCLAMATION);
