@@ -537,6 +537,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	FreePatch(datecalcpatch, sizeof(datecalcpatch)/sizeof(HexPatch*));
 	FreePatch(datecalcpatchjumps, sizeof(datecalcpatchjumps)/sizeof(HexPatch*));
 	FreePatch(comphistory_datecalcpatch, sizeof(comphistory_datecalcpatch)/sizeof(HexPatch*));
+	FreePatch(nocd, sizeof(nocd)/sizeof(HexPatch*));
 
 	CloseHandle(pi.hThread);
 	CloseHandle(pi.hProcess);
