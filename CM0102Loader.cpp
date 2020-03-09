@@ -30,95 +30,166 @@ public:
 		NoWorkPermits = false;
 		ChangeTo1280x800 = false;
 		AutoLoadPatchFiles = false;
+		strcpy(PatchFileDirectory, ".");
 		strcpy(DataDirectory, "data");
 		NoCD = false;
 	}
 
-	void ReadSettings()
+	int ReadLine(FILE *fin, char *szAttribute, char *szValue)
 	{
-		if (GetFileAttributes("CM0102Loader.ini") != -1L)
+		int Ret = 0;
+		char szBuffer[100+MAX_PATH];
+		int ptr = 0;
+		while (true)
 		{
-			char att[100], c, value[100];
-			FILE *fin = fopen("CM0102Loader.ini", "rt");
+			int c = getc(fin);
+			if (c == EOF)
+			{
+				Ret = -1;
+				szBuffer[ptr] = 0;
+				break;
+			}
+			if (c == '\n')
+			{
+				szBuffer[ptr] = 0;
+				break;
+			}
+			if (c != '\r' && c != '"')
+			{
+				szBuffer[ptr++] = (char)c;
+			}
+		}
+		if (strlen(szBuffer) > 1)
+		{
+			int attrNo = 0;
+			char *szToken = strtok(szBuffer, " ");
+			bool gotEquals = false;
+
+			strcpy(szValue, "");
+			while (szToken != NULL) 
+			{ 
+				switch (attrNo++)
+				{
+					case 0:
+						strcpy(szAttribute, szToken);
+						break;
+					case 1:
+						if (strcmp(szToken, "=") == 0)
+							gotEquals = true;
+						break;
+					default:
+						strcat(szValue, szToken);
+						strcat(szValue, " ");
+						if (gotEquals)
+							Ret = 1;
+						break;
+				}
+				szToken = strtok(NULL, " "); 
+			}
+			if (Ret == 1)
+				szValue[strlen(szValue)-1] = 0; // Cut off the trailing space
+		}
+		return Ret;
+	}
+
+	void ReadSettings(char *szSettingsFile)
+	{
+		if (szSettingsFile == NULL || szSettingsFile[0] == 0)
+			szSettingsFile = "CM0102Loader.ini";
+
+		if (GetFileAttributes(szSettingsFile) != -1L)
+		{
+			char att[100], value[MAX_PATH];
+			FILE *fin = fopen(szSettingsFile, "rt");
 			
 			while (true)
 			{
-				if (fscanf(fin, "%s %c %s", att, &c, value) != 3)
+				int ok = ReadLine(fin, att, value);
+
+				if (ok == -1)
 					break;
 
-				if (stricmp(att, "year")==0)
+				if (ok == 1)
 				{
-					Year = atoi(value);
+					if (stricmp(att, "year")==0)
+					{
+						Year = atoi(value);
+					}
+					else
+					if (stricmp(att, "ColouredAttributes") == 0)
+					{
+						ColoredAttributes = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "DisableUnprotectedContracts") == 0)
+					{
+						DisableUnprotectedContracts = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "HideNonPublicBids") == 0)
+					{
+						HideNonPublicBids = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "IncreaseToSevenSubs") == 0)
+					{
+						IncreaseToSevenSubs = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "RemoveForeignPlayerLimit") == 0)
+					{
+						RemoveForeignPlayerLimit = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "NoWorkPermits") == 0)
+					{
+						NoWorkPermits = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "ChangeTo1280x800") == 0)
+					{
+						ChangeTo1280x800 = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "AutoLoadPatchFiles") == 0)
+					{
+						AutoLoadPatchFiles = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "PatchFileDirectory") == 0)
+					{
+						strcpy(PatchFileDirectory, value);
+					}
+					else
+					if (stricmp(att, "DataDirectory") == 0)
+					{
+						strcpy(DataDirectory, value);
+					}
+					else
+					if (stricmp(att, "NoCD") == 0)
+					{
+						NoCD = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "SpeedMultiplier")==0)
+					{
+						SpeedMultiplier = atof(value);
+					}
+					else
+					if (stricmp(att, "CurrencyMultiplier")==0)
+					{
+						CurrencyMultiplier = atof(value);
+					}
+					else
+						MessageBox(0, "CM0102Loader.ini has settings that are not recognised!", "CM0102Loader Error", MB_ICONEXCLAMATION);
 				}
-				else
-				if (stricmp(att, "ColouredAttributes") == 0)
-				{
-					ColoredAttributes = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "DisableUnprotectedContracts") == 0)
-				{
-					DisableUnprotectedContracts = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "HideNonPublicBids") == 0)
-				{
-					HideNonPublicBids = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "IncreaseToSevenSubs") == 0)
-				{
-					IncreaseToSevenSubs = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "RemoveForeignPlayerLimit") == 0)
-				{
-					RemoveForeignPlayerLimit = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "NoWorkPermits") == 0)
-				{
-					NoWorkPermits = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "ChangeTo1280x800") == 0)
-				{
-					ChangeTo1280x800 = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "AutoLoadPatchFiles") == 0)
-				{
-					AutoLoadPatchFiles = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "DataDirectory") == 0)
-				{
-					strcpy(DataDirectory, value);
-				}
-				else
-				if (stricmp(att, "NoCD") == 0)
-				{
-					NoCD = (toupper(value[0]) == 'T');
-				}
-				else
-				if (stricmp(att, "SpeedMultiplier")==0)
-				{
-					SpeedMultiplier = atof(value);
-				}
-				else
-				if (stricmp(att, "CurrencyMultiplier")==0)
-				{
-					CurrencyMultiplier = atof(value);
-				}
-				else
-					MessageBox(0, "CM0102Loader.ini has settings that are not recognised!", "CM0102Loader Error", MB_ICONEXCLAMATION);
 			}
 
 			fclose(fin);
 		}
 		else
 		{
-			FILE *fout = fopen("CM0102Loader.ini", "wt");
+			FILE *fout = fopen(szSettingsFile, "wt");
 			fprintf(fout, "Year = 2001\n");
 			fprintf(fout, "SpeedMultiplier = 4\n");
 			fprintf(fout, "CurrencyMultiplier = 1.0\n");
@@ -130,6 +201,7 @@ public:
 			fprintf(fout, "NoWorkPermits = false\n");
 			fprintf(fout, "ChangeTo1280x800 = false\n");
 			fprintf(fout, "AutoLoadPatchFiles = false\n");
+			fprintf(fout, "PatchFileDirectory = .\n");
 			fprintf(fout, "DataDirectory = data\n");
 			fclose(fout);
 		}
@@ -146,7 +218,8 @@ public:
 	bool NoWorkPermits;
 	bool ChangeTo1280x800;
 	bool AutoLoadPatchFiles;
-	char DataDirectory[100];
+	char PatchFileDirectory[MAX_PATH];
+	char DataDirectory[MAX_PATH];
 	bool NoCD;
 };
 
@@ -272,12 +345,18 @@ void SpeedHack(HANDLE hProcess, double multiplier)
 	WriteWord(hProcess, 0x5472ce, (WORD)((10000.0 / multiplier)+0.5));
 }
 
-void AutoLoadPatchFiles(HANDLE hProcess)
+void AutoLoadPatchFiles(HANDLE hProcess, char *szDirectory)
 {
 	char lineBuffer[1000];
 	char part1[100], part2[100], part3[100];
 	WIN32_FIND_DATA findData;
-	HANDLE hFind = FindFirstFile("*.patch", &findData);
+
+	if (szDirectory == NULL || szDirectory[0] == 0)
+		szDirectory = ".";
+
+	strcat(szDirectory, "\\*.patch");
+
+	HANDLE hFind = FindFirstFile(szDirectory, &findData);
 
 	if (hFind != INVALID_HANDLE_VALUE)
 	{
@@ -435,8 +514,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 #ifdef _DEBUG
 	SetCurrentDirectory("F:\\Development\\CM0102Loader\\Debug\\Championship Manager 01-02");
-	char buf[260];
-	GetCurrentDirectory(260, buf);
+	char buf[MAX_PATH];
+	GetCurrentDirectory(MAX_PATH, buf);
 #endif
 
 	if (GetFileAttributes("cm0102.exe") != -1L)
@@ -458,7 +537,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			// Check if 3.9.68
 			if (memcmp(versionBuf, "3.9.68\0", 7) == 0)
 			{
-				settings.ReadSettings();
+				settings.ReadSettings(lpCmdLine);
 
 				// Apply Patches
 				ApplyPatch(pi.hProcess, disablecdremove, sizeof(disablecdremove)/sizeof(HexPatch*));
@@ -525,7 +604,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 				// Load any patch files
 				if (settings.AutoLoadPatchFiles)
-					AutoLoadPatchFiles(pi.hProcess);
+					AutoLoadPatchFiles(pi.hProcess, settings.PatchFileDirectory);
 
 				if (stricmp(settings.DataDirectory, "data") != 0)
 					ChangeDataDirectory(pi.hProcess, settings.DataDirectory);
