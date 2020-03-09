@@ -9,7 +9,7 @@ CM0102Loader is an .exe file you put in the same directory as your CM0102.exe (o
 CM0102Loader can patch the .exe in memory and changes no other files - so there will be no permanent changes.
 
 ## Options
-When you run CM0102Loader.exe for the first time it will create a CM0102Loader.ini file with the following default options:
+When you run CM0102Loader.exe for the first time it will create a CM0102Loader.ini file in the same directory with the following default options:
 ```
 Year = 2001
 SpeedMultiplier = 4
@@ -26,6 +26,8 @@ PatchFileDirectory = .
 DataDirectory = data
 ```
 It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow CM0102 Window Close, Idle Sensitivity and things to make CM0102 more portable (remove memory check, location check, etc))
+
+You can set which .ini file CM0102Loader loads by passing a parameter (e.g." CM0102Loader.exe different_settings.ini"). But by default it will use "CM0102Loader.ini".
 
 The AutoLoadPatchFiles option, when set to true, will look for .patch files in your CM0102 directory (or whatever directory PatchFileDirectory is set to. "." means the CM0102 directory) and apply those too. A good source of .patch files can be found at:
 https://github.com/nckstwrt/CM0102Patcher/blob/master/MiscPatches.zip (click Download)
