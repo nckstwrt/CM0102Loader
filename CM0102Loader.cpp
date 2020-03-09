@@ -33,6 +33,7 @@ public:
 		strcpy(PatchFileDirectory, ".");
 		strcpy(DataDirectory, "data");
 		NoCD = false;
+		strcpy(DumpEXE, "");
 	}
 
 	int ReadLine(FILE *fin, char *szAttribute, char *szValue)
@@ -171,6 +172,11 @@ public:
 						NoCD = (toupper(value[0]) == 'T');
 					}
 					else
+					if (stricmp(att, "DumpEXE") == 0)
+					{
+						strcpy(DumpEXE, value);
+					}
+					else
 					if (stricmp(att, "SpeedMultiplier")==0)
 					{
 						SpeedMultiplier = atof(value);
@@ -221,6 +227,7 @@ public:
 	char PatchFileDirectory[MAX_PATH];
 	char DataDirectory[MAX_PATH];
 	bool NoCD;
+	char DumpEXE[MAX_PATH];
 };
 
 
@@ -526,7 +533,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		{
 			DWORD bytesRead, old;
 			BYTE versionBuf[7];
-			DWORD size = 8 * 1024 * 1024;
+			DWORD size = 7192576;
 
 			// Unprotect 8mb of memory ready for writing
 			VirtualProtectEx(pi.hProcess, (void*)0x400000, size, PAGE_EXECUTE_READWRITE, &old);
@@ -539,6 +546,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			{
 				settings.ReadSettings(lpCmdLine);
 
+				// Load any patch files first, so that our patches override it if needed
+				if (settings.AutoLoadPatchFiles)
+					AutoLoadPatchFiles(pi.hProcess, settings.PatchFileDirectory);
+
 				// Apply Patches
 				ApplyPatch(pi.hProcess, disablecdremove, sizeof(disablecdremove)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, disablesplashscreen, sizeof(disablesplashscreen)/sizeof(HexPatch*));
@@ -548,7 +559,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				ApplyPatch(pi.hProcess, removemutexcheck, sizeof(removemutexcheck)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, idlesensitivity, sizeof(idlesensitivity)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, idlesensitivitytransferscreen, sizeof(idlesensitivitytransferscreen)/sizeof(HexPatch*));
-				
+			
 				if (settings.ColoredAttributes)
 					ApplyPatch(pi.hProcess, colouredattributes, sizeof(colouredattributes)/sizeof(HexPatch*));
 
@@ -602,12 +613,26 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				if (settings.NoCD)
 					ApplyPatch(pi.hProcess, nocd, sizeof(nocd)/sizeof(HexPatch*));
 
-				// Load any patch files
-				if (settings.AutoLoadPatchFiles)
-					AutoLoadPatchFiles(pi.hProcess, settings.PatchFileDirectory);
-
 				if (stricmp(settings.DataDirectory, "data") != 0)
 					ChangeDataDirectory(pi.hProcess, settings.DataDirectory);
+
+				// DumpEXE
+				if (settings.DumpEXE != NULL && strlen(settings.DumpEXE) > 0)
+				{
+					CopyFile("CM0102.exe", settings.DumpEXE, FALSE);
+					FILE *fout = fopen(settings.DumpEXE, "r+b");
+					if (fout)
+					{
+						const int exeSize = 0x6DA00D; //7192576 - the last set of bytes don't dump - unsure why. So will dump those that do.
+						BYTE *DumpBuffer = new BYTE[exeSize];
+						ReadProcessMemory(pi.hProcess, (void*)(0x400000), DumpBuffer, exeSize, &bytesRead);
+						fwrite(DumpBuffer, exeSize, 1, fout);
+						delete [] DumpBuffer;
+						fclose(fout);
+					}
+					else
+						MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot patch!", "CM0102Loader Error", MB_ICONEXCLAMATION);
+				}
 
 				// Start Game
 				ResumeThread(pi.hThread);
