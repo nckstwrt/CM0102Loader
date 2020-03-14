@@ -34,4 +34,6 @@ https://github.com/nckstwrt/CM0102Patcher/blob/master/MiscPatches.zip (click Dow
 
 DataDirectory allows you to set another directory for CM0102 to load its data from. This is normally the Data directory. But you can now copy this directory in the same folder (e.g. Oct2019) then maybe copy over the October 2019 update from www.champman0102.co.uk into the new directory, then set DataDirectory = Oct2019 and then it will load using the 2019 data.
 
+You can also add an option like "DumpEXE = Patched.exe" and that will write out a patched exe file that you can use without the loader after running (so you can use the loader like a patcher if need be)
+
 This Loader was built with Visual C++ 6 so that it can run on Win95 as easy as it does on Win10. Which also should work on things like PlayOnMac, etc.
