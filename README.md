@@ -1,4 +1,4 @@
-# CM0102Loader v1.2
+# CM0102Loader v1.3
 Loader for Championship Manager 01/02
 
 ## Downloads
