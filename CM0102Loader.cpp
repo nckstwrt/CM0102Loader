@@ -515,15 +515,17 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 							new HexPatch(5296550, "9090"), new HexPatch(5296569, "00"), new HexPatch(5296571, "2a"), new HexPatch(5383934, "9090"), new HexPatch(5383953, "00"), new HexPatch(5383955, "2a") };
 	
 
+	char szEXEDirectory[MAX_PATH];
 	PROCESS_INFORMATION pi = { 0 };
 	STARTUPINFO si = { 0 };
 	si.cb = sizeof(STARTUPINFO);
 
-#ifdef _DEBUG
-	SetCurrentDirectory("F:\\Development\\CM0102Loader\\Debug\\Championship Manager 01-02");
-	char buf[MAX_PATH];
-	GetCurrentDirectory(MAX_PATH, buf);
-#endif
+	// Ensure wherever CM0102Loader.exe is, that is the current directory
+	if (GetModuleFileName(NULL, szEXEDirectory, MAX_PATH) != 0)
+	{
+		*strrchr(szEXEDirectory, '\\') = 0;
+		SetCurrentDirectory(szEXEDirectory);
+	}
 
 	if (GetFileAttributes("cm0102.exe") != -1L)
 	{
@@ -623,7 +625,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 					FILE *fout = fopen(settings.DumpEXE, "r+b");
 					if (fout)
 					{
-						const int exeSize = 0x6DA00D; //7192576 - the last set of bytes don't dump - unsure why. So will dump those that do.
+						const int exeSize = 0x6DA00D; // The last set of bytes don't dump - unsure why. So will dump those that do.
 						BYTE *DumpBuffer = new BYTE[exeSize];
 						ReadProcessMemory(pi.hProcess, (void*)(0x400000), DumpBuffer, exeSize, &bytesRead);
 						fwrite(DumpBuffer, exeSize, 1, fout);
