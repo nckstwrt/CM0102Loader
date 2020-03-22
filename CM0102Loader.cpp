@@ -361,6 +361,7 @@ void SpeedHack(HANDLE hProcess, double multiplier)
 
 void AutoLoadPatchFiles(HANDLE hProcess, char *szDirectory)
 {
+	char fullPath[MAX_PATH];
 	char lineBuffer[1000];
 	char part1[100], part2[100], part3[100];
 	WIN32_FIND_DATA findData;
@@ -368,15 +369,16 @@ void AutoLoadPatchFiles(HANDLE hProcess, char *szDirectory)
 	if (szDirectory == NULL || szDirectory[0] == 0)
 		szDirectory = ".";
 
-	strcat(szDirectory, "\\*.patch");
+	sprintf(fullPath, "%s\\*.patch", szDirectory);
 
-	HANDLE hFind = FindFirstFile(szDirectory, &findData);
+	HANDLE hFind = FindFirstFile(fullPath, &findData);
 
 	if (hFind != INVALID_HANDLE_VALUE)
 	{
 		do
 		{
-			FILE *fin = fopen(findData.cFileName, "rt");
+			sprintf(fullPath, "%s\\%s", szDirectory, findData.cFileName);
+			FILE *fin = fopen(fullPath, "rt");
 			if (fin != NULL)
 			{
 				int bytePtr = 0;
