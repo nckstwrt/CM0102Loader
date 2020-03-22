@@ -196,20 +196,27 @@ public:
 		else
 		{
 			FILE *fout = fopen(szSettingsFile, "wt");
-			fprintf(fout, "Year = 2001\n");
-			fprintf(fout, "SpeedMultiplier = 4\n");
-			fprintf(fout, "CurrencyMultiplier = 1.0\n");
-			fprintf(fout, "ColouredAttributes = true\n");
-			fprintf(fout, "DisableUnprotectedContracts = true\n");
-			fprintf(fout, "HideNonPublicBids = true\n");
-			fprintf(fout, "IncreaseToSevenSubs = true\n");
-			fprintf(fout, "RemoveForeignPlayerLimit = false\n");
-			fprintf(fout, "NoWorkPermits = false\n");
-			fprintf(fout, "ChangeTo1280x800 = false\n");
-			fprintf(fout, "AutoLoadPatchFiles = false\n");
-			fprintf(fout, "PatchFileDirectory = .\n");
-			fprintf(fout, "DataDirectory = data\n");
-			fclose(fout);
+			if (fout != NULL)
+			{
+				fprintf(fout, "Year = 2001\n");
+				fprintf(fout, "SpeedMultiplier = 4\n");
+				fprintf(fout, "CurrencyMultiplier = 1.0\n");
+				fprintf(fout, "ColouredAttributes = true\n");
+				fprintf(fout, "DisableUnprotectedContracts = true\n");
+				fprintf(fout, "HideNonPublicBids = true\n");
+				fprintf(fout, "IncreaseToSevenSubs = true\n");
+				fprintf(fout, "RemoveForeignPlayerLimit = false\n");
+				fprintf(fout, "NoWorkPermits = false\n");
+				fprintf(fout, "ChangeTo1280x800 = false\n");
+				fprintf(fout, "AutoLoadPatchFiles = false\n");
+				fprintf(fout, "PatchFileDirectory = .\n");
+				fprintf(fout, "DataDirectory = data\n");
+				fclose(fout);
+			}
+			else
+			{
+				MessageBox(0, "Unable to write out Settings File!", "CM0102Loader Error", MB_ICONEXCLAMATION);
+			}
 		}
 	}
 
@@ -546,7 +553,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			// Check if 3.9.68
 			if (memcmp(versionBuf, "3.9.68\0", 7) == 0)
 			{
-				settings.ReadSettings(lpCmdLine);
+				settings.ReadSettings((__argc < 2) ? NULL : __argv[1]);
 
 				// Load any patch files first, so that our patches override it if needed
 				if (settings.AutoLoadPatchFiles)
