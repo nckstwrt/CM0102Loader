@@ -268,20 +268,24 @@ void WriteString(HANDLE hProcess, DWORD addr, const char *szString)
 	WriteProcessMemory(hProcess, (void*)(0x400000+addr), (void*)szString, strlen(szString)+1, &bytesWritten);
 }
 
-void ApplyPatch(HANDLE hProcess, HexPatch* patch[], int count)
+void ApplyPatch(HANDLE hProcess, HexPatch* patch)
 {
 	char hexTemp[3];
 	hexTemp[2] = 0;
+	for (unsigned int j = 0; j < strlen(patch->hex); j+=2)
+	{
+		hexTemp[0] = patch->hex[j]; 
+		hexTemp[1] = patch->hex[j+1]; 
+		BYTE byte = (BYTE)strtol(hexTemp, NULL, 16);
+		WriteByte(hProcess, patch->offset+(j/2), byte);
+	}
+}
 
+void ApplyPatch(HANDLE hProcess, HexPatch* patch[], int count)
+{
 	for (int i = 0; i < count; i++)
 	{
-		for (unsigned int j = 0; j < strlen(patch[i]->hex); j+=2)
-		{
-			hexTemp[0] = patch[i]->hex[j]; 
-			hexTemp[1] = patch[i]->hex[j+1]; 
-			BYTE byte = (BYTE)strtol(hexTemp, NULL, 16);
-			WriteByte(hProcess, patch[i]->offset+(j/2), byte);
-		}
+		ApplyPatch(hProcess, patch[i]);
 	}
 }
 
@@ -351,6 +355,35 @@ void YearChanger(HANDLE hProcess, WORD year)
 		WriteByte(hProcess, 0x518473, 0xeb);
 		WriteWord(hProcess, 0x52036e, year);
 		WriteByte(hProcess, 0x5204b8, 0xeb);
+    }
+
+	// Special 5 - For going back in time (fixes Euros - might be a better generic fix for euros for the future too (unlike Special 3))
+    if (year < 2000)
+    {
+        // Euro
+        for (i = 1960; i < 2000; i+=4)
+        {
+            if (i >= year)
+            {
+				WriteWord(hProcess, 0x1F9C0a, (i - 4));
+                break;
+            }
+        }
+
+        // World Cup
+        for (i = 1930; i < 2000; i += 4)
+        {
+            if (i >= year)
+            {
+				WriteWord(hProcess, 0x1F99A1, (i - 5));
+				WriteWord(hProcess, 0x1F99BC, (i - 4));
+                break;
+            }
+        }
+
+        // Turn off World Cup 1438 error
+		HexPatch nop1438(0x52F2AC, "9090909090");
+		ApplyPatch(hProcess, &nop1438);
     }
 }
 
