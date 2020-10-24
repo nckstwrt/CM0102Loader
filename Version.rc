@@ -28,8 +28,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_UK
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,6
- PRODUCTVERSION 1,0,0,6
+ FILEVERSION 1,0,0,7
+ PRODUCTVERSION 1,0,0,7
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -46,15 +46,15 @@ BEGIN
         BEGIN
             VALUE "Comments", "\0"
             VALUE "CompanyName", " \0"
-            VALUE "FileDescription", "CM0102Loader by Nick v1.6\0"
-            VALUE "FileVersion", "1, 0, 0, 6\0"
-            VALUE "InternalName", "CM0102Loader by Nick v1.6\0"
+            VALUE "FileDescription", "CM0102Loader by Nick v1.7\0"
+            VALUE "FileVersion", "1, 0, 0, 7\0"
+            VALUE "InternalName", "CM0102Loader by Nick v1.7\0"
             VALUE "LegalCopyright", "Copyright © 2020\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "CM0102Loader.exe\0"
             VALUE "PrivateBuild", "\0"
-            VALUE "ProductName", "CM0102Loader by Nick v1.6\0"
-            VALUE "ProductVersion", "1, 0, 0, 6\0"
+            VALUE "ProductName", "CM0102Loader by Nick v1.7\0"
+            VALUE "ProductVersion", "1, 0, 0, 7\0"
             VALUE "SpecialBuild", "\0"
         END
     END

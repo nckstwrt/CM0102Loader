@@ -23,6 +23,7 @@ public:
 		SpeedMultiplier = 4.0;
 		CurrencyMultiplier = 1.0;
 		ColoredAttributes = true;
+		Debug = false;
 		DisableUnprotectedContracts = true;
 		HideNonPublicBids = true;
 		IncreaseToSevenSubs = true;
@@ -122,6 +123,11 @@ public:
 						ColoredAttributes = (toupper(value[0]) == 'T');
 					}
 					else
+					if (stricmp(att, "Debug") == 0)
+					{
+						Debug = (toupper(value[0]) == 'T');
+					}
+					else
 					if (stricmp(att, "DisableUnprotectedContracts") == 0)
 					{
 						DisableUnprotectedContracts = (toupper(value[0]) == 'T');
@@ -211,6 +217,7 @@ public:
 				fprintf(fout, "AutoLoadPatchFiles = false\n");
 				fprintf(fout, "PatchFileDirectory = .\n");
 				fprintf(fout, "DataDirectory = data\n");
+				fprintf(fout, "Debug = false\n");
 				fclose(fout);
 			}
 			else
@@ -224,6 +231,7 @@ public:
 	double SpeedMultiplier;
 	double CurrencyMultiplier;
 	bool ColoredAttributes;
+	bool Debug;
 	bool DisableUnprotectedContracts;
 	bool HideNonPublicBids;
 	bool IncreaseToSevenSubs;
@@ -571,7 +579,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 	if (GetFileAttributes("cm0102.exe") != -1L)
 	{
-		BOOL bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+		settings.ReadSettings((__argc < 2) ? NULL : __argv[1]);
+
+		BOOL bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
   
 		if (bProcess)
 		{
@@ -586,10 +596,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 			ReadProcessMemory(pi.hProcess, (void*)(0x400000+0x6D4394), versionBuf, 7, &bytesRead);
 
 			// Check if 3.9.68
-			if (memcmp(versionBuf, "3.9.68\0", 7) == 0)
+			if (memcmp(versionBuf, "3.9.68", 6) == 0)
 			{
-				settings.ReadSettings((__argc < 2) ? NULL : __argv[1]);
-
 				// Load any patch files first, so that our patches override it if needed
 				if (settings.AutoLoadPatchFiles)
 					AutoLoadPatchFiles(pi.hProcess, settings.PatchFileDirectory);
@@ -679,7 +687,25 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				}
 
 				// Start Game
-				ResumeThread(pi.hThread);
+				if (settings.Debug)
+				{
+					DEBUG_EVENT debug_event = {0};
+					for(;;)
+					{
+						if (!WaitForDebugEvent(&debug_event, INFINITE))
+							return 0;
+
+						ContinueDebugEvent(debug_event.dwProcessId,
+										  debug_event.dwThreadId,
+										  DBG_CONTINUE);
+
+						if (debug_event.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT)
+							break;
+					}
+
+				}
+				else
+					ResumeThread(pi.hThread);
 			}
 			else
 				MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot patch!", "CM0102Loader Error", MB_ICONEXCLAMATION);
