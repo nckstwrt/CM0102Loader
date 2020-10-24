@@ -1,4 +1,4 @@
-# CM0102Loader v1.6
+# CM0102Loader v1.7
 Loader for Championship Manager 01/02
 
 ## Downloads
@@ -24,6 +24,7 @@ ChangeTo1280x800 = false
 AutoLoadPatchFiles = false
 PatchFileDirectory = .
 DataDirectory = data
+Debug = false
 ```
 It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow CM0102 Window Close, Idle Sensitivity and things to make CM0102 more portable (remove memory check, location check, etc))
 
@@ -33,6 +34,8 @@ The AutoLoadPatchFiles option, when set to true, will look for .patch files in y
 https://github.com/nckstwrt/CM0102Patcher/blob/master/MiscPatches.zip (click Download)
 
 DataDirectory allows you to set another directory for CM0102 to load its data from. This is normally the Data directory. But you can now copy this directory in the same folder (e.g. Oct2019) then maybe copy over the October 2019 update from www.champman0102.co.uk into the new directory, then set DataDirectory = Oct2019 and then it will load using the 2019 data.
+
+Try Debug = true if you find your Saturn/Tapani exe is exiting without an error sometimes. It might just, weirdly, fix it!
 
 You can also add an option like "DumpEXE = Patched.exe" and that will write out a patched exe file that you can use without the loader after running (so you can use the loader like a patcher if need be)
 
