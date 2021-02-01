@@ -27,6 +27,10 @@ public:
 		DisableUnprotectedContracts = true;
 		HideNonPublicBids = true;
 		IncreaseToSevenSubs = true;
+		RegenFixes = true;
+		ForceLoadAllPlayers = false;
+		AddTapaniRegenCode = false;
+		UnCap20s = false;
 		RemoveForeignPlayerLimit = false;
 		NoWorkPermits = false;
 		ChangeTo1280x800 = false;
@@ -143,6 +147,26 @@ public:
 						IncreaseToSevenSubs = (toupper(value[0]) == 'T');
 					}
 					else
+					if (stricmp(att, "RegenFixes") == 0)
+					{
+						RegenFixes = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "ForceLoadAllPlayers") == 0)
+					{
+						ForceLoadAllPlayers = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "AddTapaniRegenCode") == 0)
+					{
+						AddTapaniRegenCode = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "UnCap20s") == 0)
+					{
+						UnCap20s = (toupper(value[0]) == 'T');
+					}
+					else
 					if (stricmp(att, "RemoveForeignPlayerLimit") == 0)
 					{
 						RemoveForeignPlayerLimit = (toupper(value[0]) == 'T');
@@ -211,6 +235,10 @@ public:
 				fprintf(fout, "DisableUnprotectedContracts = true\n");
 				fprintf(fout, "HideNonPublicBids = true\n");
 				fprintf(fout, "IncreaseToSevenSubs = true\n");
+				fprintf(fout, "RegenFixes = true\n");
+				fprintf(fout, "ForceLoadAllPlayers = false\n");
+				fprintf(fout, "AddTapaniRegenCode = false\n");
+				fprintf(fout, "UnCap20s = false\n");
 				fprintf(fout, "RemoveForeignPlayerLimit = false\n");
 				fprintf(fout, "NoWorkPermits = false\n");
 				fprintf(fout, "ChangeTo1280x800 = false\n");
@@ -235,6 +263,10 @@ public:
 	bool DisableUnprotectedContracts;
 	bool HideNonPublicBids;
 	bool IncreaseToSevenSubs;
+	bool RegenFixes;
+	bool ForceLoadAllPlayers;
+	bool AddTapaniRegenCode;
+	bool UnCap20s;
 	bool RemoveForeignPlayerLimit;
 	bool NoWorkPermits;
 	bool ChangeTo1280x800;
@@ -569,7 +601,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 							new HexPatch(4800037, "9090"), new HexPatch(4800056, "00"), new HexPatch(4800058, "2a"), new HexPatch(4919092, "9090"), new HexPatch(4919111, "00"), new HexPatch(4919113, "2a"), 
 							new HexPatch(4963058, "9090"), new HexPatch(4963077, "00"), new HexPatch(4963079, "2a"), new HexPatch(5256098, "9090"), new HexPatch(5256117, "00"), new HexPatch(5256119, "2a"), 
 							new HexPatch(5296550, "9090"), new HexPatch(5296569, "00"), new HexPatch(5296571, "2a"), new HexPatch(5383934, "9090"), new HexPatch(5383953, "00"), new HexPatch(5383955, "2a") };
-	
+	HexPatch* uncap20s[] = { new HexPatch(0x143624, "9090"), new HexPatch(0x1440B5, "9090"), new HexPatch(0x144357, "9090"), new HexPatch(0x1443E1, "9090"), new HexPatch(0x144471, "9090") };
 
 	char szEXEDirectory[MAX_PATH];
 	PROCESS_INFORMATION pi = { 0 };
@@ -629,6 +661,21 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 				if (settings.IncreaseToSevenSubs)
 					ApplyPatch(pi.hProcess, sevensubs, sizeof(sevensubs)/sizeof(HexPatch*));
+
+				if (settings.RegenFixes)
+					ApplyPatch(pi.hProcess, regenfixes, sizeof(regenfixes)/sizeof(HexPatch*));
+
+				if (settings.ForceLoadAllPlayers)
+					ApplyPatch(pi.hProcess, forceloadallplayers, sizeof(forceloadallplayers)/sizeof(HexPatch*));
+
+				if (settings.AddTapaniRegenCode)
+				{
+					ApplyPatch(pi.hProcess, tapanispacemaker, sizeof(tapanispacemaker)/sizeof(HexPatch*));
+					ApplyPatch(pi.hProcess, tapaninewregencode, sizeof(tapaninewregencode)/sizeof(HexPatch*));
+				}
+
+				if (settings.UnCap20s)
+					ApplyPatch(pi.hProcess, uncap20s, sizeof(uncap20s)/sizeof(HexPatch*));
 
 				if (settings.RemoveForeignPlayerLimit)
 					ApplyPatch(pi.hProcess, remove3playerlimit, sizeof(remove3playerlimit)/sizeof(HexPatch*));
