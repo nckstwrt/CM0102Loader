@@ -400,11 +400,47 @@ void SpeedHack(HANDLE hProcess, double multiplier)
 	WriteWord(hProcess, 0x5472ce, (WORD)((10000.0 / multiplier)+0.5));
 }
 
+void ApplyPatchFile(HANDLE hProcess, char *szPatchFile)
+{
+	char lineBuffer[1000];
+	char part1[100], part2[100], part3[100];
+
+	FILE *fin = fopen(szPatchFile, "rt");
+	if (fin != NULL)
+	{
+		int bytePtr = 0;
+		int bytesRead;
+		
+		while (true)
+		{
+			bytesRead = fread(&lineBuffer[bytePtr], 1, 1, fin);
+			if (bytesRead == 0)
+				break;
+			if (lineBuffer[bytePtr] == 0xa)
+			{
+				lineBuffer[bytePtr] = 0;
+				if (bytePtr > 0 && lineBuffer[0] >= '0' && lineBuffer[0] <= '9')
+				{
+					if (sscanf(lineBuffer, "%s %s %s\n", part1, part2, part3) == 3)
+					{
+						DWORD addr = strtol(part1, NULL, 16);
+						BYTE value = (BYTE)strtol(part3, NULL, 16);
+						WriteByte(hProcess, addr, value);
+					}
+				}
+				bytePtr = 0;
+			}
+			else
+				bytePtr++;
+		}
+
+		fclose(fin);
+	}
+}
+
 void AutoLoadPatchFiles(HANDLE hProcess, char *szDirectory)
 {
 	char fullPath[MAX_PATH];
-	char lineBuffer[1000];
-	char part1[100], part2[100], part3[100];
 	WIN32_FIND_DATA findData;
 
 	if (szDirectory == NULL || szDirectory[0] == 0)
@@ -419,37 +455,7 @@ void AutoLoadPatchFiles(HANDLE hProcess, char *szDirectory)
 		do
 		{
 			sprintf(fullPath, "%s\\%s", szDirectory, findData.cFileName);
-			FILE *fin = fopen(fullPath, "rt");
-			if (fin != NULL)
-			{
-				int bytePtr = 0;
-				int bytesRead;
-				
-				while (true)
-				{
-					bytesRead = fread(&lineBuffer[bytePtr], 1, 1, fin);
-					if (bytesRead == 0)
-						break;
-					if (lineBuffer[bytePtr] == 0xa)
-					{
-						lineBuffer[bytePtr] = 0;
-						if (bytePtr > 0 && lineBuffer[0] >= '0' && lineBuffer[0] <= '9')
-						{
-							if (sscanf(lineBuffer, "%s %s %s\n", part1, part2, part3) == 3)
-							{
-								DWORD addr = strtol(part1, NULL, 16);
-								BYTE value = (BYTE)strtol(part3, NULL, 16);
-								WriteByte(hProcess, addr, value);
-							}
-						}
-						bytePtr = 0;
-					}
-					else
-						bytePtr++;
-				}
-
-				fclose(fin);
-			}
+			ApplyPatchFile(hProcess, fullPath);
 		} while (FindNextFile(hFind, &findData) != 0);
 		FindClose(hFind);
 	}
@@ -579,7 +585,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 	if (GetFileAttributes("cm0102.exe") != -1L)
 	{
-		settings.ReadSettings((__argc < 2) ? NULL : __argv[1]);
+		settings.ReadSettings((__argc >= 2 && __argv[1][0] != '-') ?  __argv[1] : NULL);
 
 		BOOL bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
   
@@ -684,6 +690,18 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 					}
 					else
 						MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot patch!", "CM0102Loader Error", MB_ICONEXCLAMATION);
+				}
+
+				// Apply any patch files manually added in the commandline
+				for (int i = 1; i < __argc; i++)
+				{
+					if (stricmp(__argv[i], "-patch") == 0)
+					{
+						if (__argc > i)
+						{
+							ApplyPatchFile(pi.hProcess, __argv[i+1]);
+						}
+					}
 				}
 
 				// Start Game
