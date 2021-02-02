@@ -10,3 +10,6 @@
 *.sbr
 *.idb
 *.res
+CM0102Loader.dsp
+Debug/CM0102Loader.bsc
+Release/CM0102Loader.zip
