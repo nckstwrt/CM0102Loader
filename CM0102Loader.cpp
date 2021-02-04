@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdio.h>
+#include "resource.h"
 
 class HexPatch
 {
@@ -508,6 +509,33 @@ void ChangeDataDirectory(HANDLE hProcess, const char *szDataDirectory)
 		MessageBox(0, "Failed to change data directory.\r\nPlease ensure DataDirectory is set to a directory without spaces in the name.", "CM0102Loader Error", MB_ICONEXCLAMATION);
 }
 
+void OutputResourceFile(int ResId, const char *szFileOut)
+{
+	HMODULE hModule;
+	HRSRC hResource;
+	HGLOBAL hMemory;
+	DWORD dwSize;
+	LPVOID lpAddress;
+	FILE *fout;
+
+	hModule = GetModuleHandle(NULL);
+	hResource = FindResource(hModule, MAKEINTRESOURCE(ResId), "BINARY");
+	hMemory = LoadResource(hModule, hResource);
+	dwSize = SizeofResource(hModule, hResource);
+	lpAddress = LockResource(hMemory);
+
+	fout = fopen(szFileOut,"wb");
+	if (fout)
+	{
+		fwrite(lpAddress, 1, dwSize, fout);
+		fclose(fout);
+	}
+
+	UnlockResource(hMemory);
+	FreeResource(hMemory);
+	FreeLibrary(hModule);
+}
+
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	Settings settings;
@@ -556,7 +584,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 								new HexPatch(0x421D1D, "5068251d8200eb06060106010601"), new HexPatch(0x421D33, "06"), new HexPatch(0x421F62, "05"), new HexPatch(0x42259D, "50b8f71e60009090"), new HexPatch(0x4225A9, "90"), new HexPatch(0x4225B3, "09"), 
 								new HexPatch(0x42283E, "06"), new HexPatch(0x470CCE, "8b"), new HexPatch(0x470F57, "8b"), new HexPatch(0x4750E2, "81"), new HexPatch(0x49C626, "02"), new HexPatch(0x49C69E, "02"), new HexPatch(0x49C73C, "02"), 
 								new HexPatch(0x4AEED4, "2003"), new HexPatch(0x4AEED9, "0005"), new HexPatch(0x4AEEFC, "2003"), new HexPatch(0x4AEF01, "0005"), new HexPatch(0x4B9A74, "1f03"), new HexPatch(0x4B9A7C, "ff04"), new HexPatch(0x4BAA58, "1f03"), 
-								new HexPatch(0x4BAA60, "ff04"), new HexPatch(0x5C3720, "626b6731323830"), new HexPatch(0x5C3728, "383030"), new HexPatch(0x5C372C, "72676e"), new HexPatch(0x616449, "3830302e6d627200"), new HexPatch(0x65A7CD, "383030") };
+								new HexPatch(0x4BAA60, "ff04"), new HexPatch(0x5C3720, "626b6731323830"), new HexPatch(0x5C3728, "383030"), new HexPatch(0x5C372C, "72676e"), new HexPatch(0x616449, "3830302e6d627200"), new HexPatch(0x65A7CD, "383030"), 
+								new HexPatch(0x15F3DF, "9090") };
 	HexPatch* tapanispacemaker[] = { new HexPatch(0x12D8FB, "355f"), new HexPatch(0x203834, "81ec200200"), new HexPatch(0x20383A, "5355565751b9ec04000083c8ffbf78f19c"), new HexPatch(0x20384C, "f3ab6a1a59bf9c3cb600f3ab59a19423ae"), new HexPatch(0x20385E, "33db33f63bc3") };
 	HexPatch* findallplayers[] = { new HexPatch(0x3AFC4B, "e99e00"), new HexPatch(0x3AFC50, "90") };
 	HexPatch* jobsabroadboost[] = { new HexPatch(0x29EA36, "eb"), new HexPatch(0x29D315, "eb"), new HexPatch(0x29D665, "eb"), new HexPatch(0x29D6E4, "eb"), new HexPatch(0x29EA7E, "eb") };
@@ -685,13 +714,13 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 				if (settings.ChangeTo1280x800)
 				{
-					if (GetFileAttributes("Data\\bkg1280_800.rgn") == -1L || GetFileAttributes("Data\\m800.mbr") == -1L || GetFileAttributes("Data\\g800.mbr") == -1L)
-					{
-						MessageBox(0, "CM0102.exe needs bkg1280_800.rgn, m800.mbr and g800.mbr in the Data directory to go to 1280x800\r\nLook for cmbg1280x800.zip for these files.", "CM0102Loader Error", MB_ICONEXCLAMATION);
-					}
-
 					ApplyPatch(pi.hProcess, tapanispacemaker, sizeof(tapanispacemaker)/sizeof(HexPatch*));
 					ApplyPatch(pi.hProcess, to1280x800, sizeof(to1280x800)/sizeof(HexPatch*));
+
+					// Copy the 1280x800 images file out of the resources
+					OutputResourceFile(IDR_BINARY1, "Data\\bkg1280_800.rgn");
+					OutputResourceFile(IDR_BINARY2, "Data\\m800.mbr");
+					OutputResourceFile(IDR_BINARY3, "Data\\g800.mbr");
 				}
 				
 				// Year Change

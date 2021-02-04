@@ -101,6 +101,15 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON1               ICON    DISCARDABLE     "cm0102.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// BINARY
+//
+
+IDR_BINARY1             BINARY  DISCARDABLE     "Pics\\bkg1280_800.rgn"
+IDR_BINARY2             BINARY  DISCARDABLE     "Pics\\g800.MBR"
+IDR_BINARY3             BINARY  DISCARDABLE     "Pics\\m800.mbr"
 #endif    // English (U.K.) resources
 /////////////////////////////////////////////////////////////////////////////
 
