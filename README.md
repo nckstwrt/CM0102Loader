@@ -1,4 +1,4 @@
-# CM0102Loader v1.7
+# CM0102Loader v1.8
 Loader for Championship Manager 01/02
 
 ## Downloads
@@ -18,6 +18,10 @@ ColouredAttributes = true
 DisableUnprotectedContracts = true
 HideNonPublicBids = true
 IncreaseToSevenSubs = true
+RegenFixes = true
+ForceLoadAllPlayers = false
+AddTapaniRegenCode = false
+UnCap20s = false
 RemoveForeignPlayerLimit = false
 NoWorkPermits = false
 ChangeTo1280x800 = false
@@ -38,5 +42,7 @@ DataDirectory allows you to set another directory for CM0102 to load its data fr
 Try Debug = true if you find your Saturn/Tapani exe is exiting without an error sometimes. It might just, weirdly, fix it!
 
 You can also add an option like "DumpEXE = Patched.exe" and that will write out a patched exe file that you can use without the loader after running (so you can use the loader like a patcher if need be)
+
+With version 1.8 you can also start CM0102Loader with the commandline option "-patch patch1.patch -patch patch2.patch" to load in patch files too.
 
 This Loader was built with Visual C++ 6 so that it can run on Win95 as easy as it does on Win10. Which also should work on things like PlayOnMac, etc.
