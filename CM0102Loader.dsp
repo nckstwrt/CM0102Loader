@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"C:\ChampMan\Championship Manager 0102\TestQuick\OriginalGame\CM0102Loader.exe" /pdbtype:sept
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"C:\ChampMan\Championship Manager 0102\TestQuick\Championship Manager 01-02\CM0102Loader.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
 !ENDIF 
@@ -94,6 +94,10 @@ SOURCE=.\CM0102Loader.cpp
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE=.\resource.h
+# End Source File
 # End Group
 # Begin Group "Resource Files"
 
@@ -105,6 +109,22 @@ SOURCE=.\cm0102.ico
 # Begin Source File
 
 SOURCE=.\Version.rc
+# End Source File
+# End Group
+# Begin Group "Pics"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\Pics\bkg1280_800.rgn
+# End Source File
+# Begin Source File
+
+SOURCE=.\Pics\g800.MBR
+# End Source File
+# Begin Source File
+
+SOURCE=.\Pics\m800.mbr
 # End Source File
 # End Group
 # End Target

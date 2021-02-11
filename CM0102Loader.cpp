@@ -630,7 +630,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 							new HexPatch(4800037, "9090"), new HexPatch(4800056, "00"), new HexPatch(4800058, "2a"), new HexPatch(4919092, "9090"), new HexPatch(4919111, "00"), new HexPatch(4919113, "2a"), 
 							new HexPatch(4963058, "9090"), new HexPatch(4963077, "00"), new HexPatch(4963079, "2a"), new HexPatch(5256098, "9090"), new HexPatch(5256117, "00"), new HexPatch(5256119, "2a"), 
 							new HexPatch(5296550, "9090"), new HexPatch(5296569, "00"), new HexPatch(5296571, "2a"), new HexPatch(5383934, "9090"), new HexPatch(5383953, "00"), new HexPatch(5383955, "2a") };
-	HexPatch* uncap20s[] = { new HexPatch(0x143624, "9090"), new HexPatch(0x1440B5, "9090"), new HexPatch(0x144357, "9090"), new HexPatch(0x1443E1, "9090"), new HexPatch(0x144471, "9090"), new HexPatch(0x408043, "9090") };
+	HexPatch* uncap20s[] = { new HexPatch(0x143624, "9090"), new HexPatch(0x1440B5, "9090"), new HexPatch(0x144357, "9090"), new HexPatch(0x1443E1, "9090"), new HexPatch(0x144471, "9090"), new HexPatch(0x40807C, "9090") };
 
 	char szEXEDirectory[MAX_PATH];
 	PROCESS_INFORMATION pi = { 0 };
