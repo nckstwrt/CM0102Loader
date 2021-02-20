@@ -1,9 +1,21 @@
 Microsoft Developer Studio Workspace File, Format Version 6.00
 # WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
-#
+
 ###############################################################################
 
 Project: "CM0102Loader"=.\CM0102Loader.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "CM2Year"=.\CM2Year\CM2Year.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
