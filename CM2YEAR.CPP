@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdarg.h>
 
 float detect_version(FILE *fin)
 {
@@ -18,6 +19,19 @@ void write_byte(FILE* fin, long pos, int byte)
 {
 	fseek(fin, pos, SEEK_SET);
 	putc(byte, fin);
+}
+
+void write_bytes(FILE* fin, long pos, int numberofbytes, ...)
+{
+	fseek(fin, pos, SEEK_SET);
+
+	va_list vl;
+    va_start(vl, numberofbytes);
+
+	for (int i = 0; i < numberofbytes; i++)
+		putc(va_arg(vl, int), fin);
+
+	va_end(vl);
 }
 
 int main(int argc, char *argv[])
@@ -93,70 +107,150 @@ int main(int argc, char *argv[])
 	       }
 	       else if (version == 2.93f)
 	       {
-			// Set the real year it will start from
-			real_year = 97 + ((year - 1997) % 4);
-			write_byte(fin, 0xAB085, real_year);
+				// Set the real year it will start from
+				if (year == 2021)
+					real_year = 97;
+				else
+					real_year = 97 + ((year - 1997) % 4);
+				write_byte(fin, 0xAB085, real_year);
 
-			// set 1900 back to account for it (e.g. add ecx, 76Ch)
-			int base_year = 1900 + (year - 1997) - (real_year - 97);
-			write_byte(fin, 0x757C5, (base_year - 0x700));  // 1
-			write_byte(fin, 0x918FF, (base_year - 0x700));  // 2
-			write_byte(fin, 0x96AD1, (base_year - 0x700));  // 3
-			write_byte(fin, 0x99BD1, (base_year - 0x700));  // 4
-			write_byte(fin, 0x99C3A, (base_year - 0x700));  // 5
-			write_byte(fin, 0x9A165, (base_year - 0x700));  // 5.1
-			write_byte(fin, 0x9A17E, ((base_year - 0x700)+1));  // 5.2
-			write_byte(fin, 0x9A2B6, (base_year - 0x700) + 1); // 6
-			write_byte(fin, 0xA4213, (base_year - 0x700) + 1); // 7
-			write_byte(fin, 0xA448B, (base_year - 0x700) + 1); // 8
-			write_byte(fin, 0xC26D1, (base_year - 0x700) + 1); // 9
-			write_byte(fin, 0xC9587, (base_year - 0x700) + 1); // 10
+				// set 1900 back to account for it (e.g. add ecx, 76Ch)
+				int base_year = 1900 + (year - 1997) - (real_year - 97);
+				write_byte(fin, 0x757C5, (base_year - 0x700));  // 1
+				write_byte(fin, 0x918FF, (base_year - 0x700));  // 2
+				write_byte(fin, 0x96AD1, (base_year - 0x700));  // 3
+				write_byte(fin, 0x99BD1, (base_year - 0x700));  // 4
+				write_byte(fin, 0x99C3A, (base_year - 0x700));  // 5
+				write_byte(fin, 0x9A165, (base_year - 0x700));  // 5.1
+				write_byte(fin, 0x9A17E, ((base_year - 0x700)+1));  // 5.2
+				write_byte(fin, 0x9A2B6, (base_year - 0x700) + 1); // 6
+				write_byte(fin, 0xA4213, (base_year - 0x700) + 1); // 7
+				write_byte(fin, 0xA448B, (base_year - 0x700) + 1); // 8
+				write_byte(fin, 0xC26D1, (base_year - 0x700) + 1); // 9
+				write_byte(fin, 0xC9587, (base_year - 0x700) + 1); // 10
 
-			// Make it so it's "Season 2020/21" rather than "Season 2020/1"
-			write_byte(fin, 0x9A1CB, 0x90);
-			write_byte(fin, 0x9A1CC, 0x90);
-			write_byte(fin, 0x9A1CF, 0x02);
-			write_byte(fin, 0x9A1D0, 0x7c);
+				// Make it so it's "Season 2020/21" rather than "Season 2020/1"
+				write_byte(fin, 0x9A1CB, 0x90);
+				write_byte(fin, 0x9A1CC, 0x90);
+				write_byte(fin, 0x9A1CF, 0x02);
+				write_byte(fin, 0x9A1D0, 0x7c);
 
-			// No idea what this code does anymore :)
-			write_byte(fin, 0x9A236, 0x83);
-			if (year >= 1997)
-			{
-				write_byte(fin, 0x9A237, 0xc2);
-				write_byte(fin, 0x9A238, (year - 1997) - (real_year - 97));
-			}
-			else
-			{
-				write_byte(fin, 0x9A237, 0xea);
-				write_byte(fin, 0x9A238, (1997 - year) - (real_year - 97));
-			}
-			write_byte(fin, 0x9A239, 0x83);
-			write_byte(fin, 0x9A23A, 0xfa);
-			write_byte(fin, 0x9A23B, 0x64);
-			write_byte(fin, 0x9A23C, 0x7c);
-			write_byte(fin, 0x9A23D, 0x03);
-			write_byte(fin, 0x9A23E, 0x83);
-			write_byte(fin, 0x9A23F, 0xea);
-			write_byte(fin, 0x9A240, 0x64);
-			write_byte(fin, 0x9A241, 0x66);
+				// No idea what this code does anymore :)
+				write_byte(fin, 0x9A236, 0x83);
+				if (year >= 1997)
+				{
+					write_byte(fin, 0x9A237, 0xc2);
+					write_byte(fin, 0x9A238, (year - 1997) - (real_year - 97));
+				}
+				else
+				{
+					write_byte(fin, 0x9A237, 0xea);
+					write_byte(fin, 0x9A238, (1997 - year) - (real_year - 97));
+				}
+				write_byte(fin, 0x9A239, 0x83);
+				write_byte(fin, 0x9A23A, 0xfa);
+				write_byte(fin, 0x9A23B, 0x64);
+				write_byte(fin, 0x9A23C, 0x7c);
+				write_byte(fin, 0x9A23D, 0x03);
+				write_byte(fin, 0x9A23E, 0x83);
+				write_byte(fin, 0x9A23F, 0xea);
+				write_byte(fin, 0x9A240, 0x64);
+				write_byte(fin, 0x9A241, 0x66);
 
-			// Stop game from exiting after 30 seasons
-			write_byte(fin, 0x75625, 0xEB);
+				// Stop game from exiting after 30 seasons
+				write_byte(fin, 0x75625, 0xEB);
 
-			// Wage Fix
-			write_byte(fin, 0x14C0C8, 0xF8);
-			write_byte(fin, 0x14D79C, 0xF8);
-			write_byte(fin, 0x14D7EC, 0xF8);
-			write_byte(fin, 0x152CA2, 0xF8);
-			write_byte(fin, 0x152F12, 0xF8);
-               }
+				// Wage Fix
+				write_byte(fin, 0x14C0C8, 0xF8);
+				write_byte(fin, 0x14D79C, 0xF8);
+				write_byte(fin, 0x14D7EC, 0xF8);
+				write_byte(fin, 0x152CA2, 0xF8);
+				write_byte(fin, 0x152F12, 0xF8);
+
+				// Change name to right year (decided against this in the end)
+				// fseek(fin, 0x13FD95, SEEK_SET);
+				// fprintf(fin, "%02d-%02d", (year%100), (year%100)+1);
+
+				/*				
+				// Expand the Data Segment
+				write_byte(fin, 0x290C8, 0);
+				write_byte(fin, 0x290C9, 0);
+				write_byte(fin, 0x290CA, 0xFF);
+				write_byte(fin, 0x290CB, 0x01);
+
+				// Allocate more memory for players
+				write_byte(fin, 0x9EBE9, 0x06);
+
+				// Allocate more memory for players
+				write_byte(fin, 0xA014C, 0x06E);
+
+				// Set number of leagues allowed
+				write_byte(fin, 0xAA86C, 0x05);
+				*/
+
+				// Set Prem Subs to 5/3 (and no restrictions)
+				write_byte(fin, 0x107BF5, 0x5);
+				write_byte(fin, 0x107C03, 0x3);
+				write_byte(fin, 0x107C11, 0x10);
+
+				// Set Division 1 to have 5/3 Subs (and no restrictions) + Corresponding FixUp Table
+				write_bytes(fin, 0x10875A, 14, 0x66, 0xC7, 0x80, 0x48, 0x2D, 0x17, 0x00, 0x05, 0x03, 0xB6, 0x10, 0x90, 0x90, 0x90); 
+				write_byte(fin, 0x5C02E, 0x09);
+				write_bytes(fin, 0x5C025, 4, 0x09, 0x07, 0x02, 0x48);
+
+				// Set Division 2 to have 5/3 Subs (and no restrictions) + Corresponding FixUp Table
+				write_bytes(fin, 0x1093C6, 20, 0x66, 0xC7, 0x80, 0x48, 0x2D, 0x17, 0x00, 0x05, 0x03, 0x8A, 0x1D, 0x6A, 0x49, 0xA4, 0x00, 0x90, 0x90, 0x90, 0xB6, 0x10); 
+				write_byte(fin, 0x5CF67, 0x75);
+				write_byte(fin, 0x5CF6A, 0x48);
+				write_byte(fin, 0x5CF70, 0x7D);
+				write_byte(fin, 0x5CF79, 0x75);
+
+				// Set Division 3 to have 5/3 Subs (and no restrictions) + Corresponding FixUp Table
+				write_bytes(fin, 0x10A035, 20, 0x66, 0xC7, 0x80, 0x48, 0x2D, 0x17, 0x00, 0x05, 0x03, 0x8A, 0x1D, 0x6A, 0x49, 0xA4, 0x00, 0x90, 0x90, 0x90, 0xB6, 0x10); 
+				write_byte(fin, 0x5C724, 0xE4);
+				write_byte(fin, 0x5C727, 0x48);
+				write_byte(fin, 0x5C72D, 0xEC);
+				write_byte(fin, 0x5C736, 0xE4);
+
+				// Set Serie A to 5/5 (and no restrictions) + Corresponding FixUp Table
+				write_bytes(fin, 0x112849, 12, 0x66, 0xC7, 0x80, 0x49, 0x2D, 0x17, 0x00, 0x05, 0x10, 0x90, 0x90, 0x90);
+				write_byte(fin, 0x621C6, 0xF8);
+				write_byte(fin, 0x621C9, 0x49);
+				write_byte(fin, 0x621CF, 0xF8);
+
+				// Set Serie B to 5/5 (and no restrictions) + Corresponding FixUp Table
+				write_bytes(fin, 0x113871, 12, 0x66, 0xC7, 0x80, 0x49, 0x2D, 0x17, 0x00, 0x05, 0x10, 0x90, 0x90, 0x90);
+				write_byte(fin, 0x62FDF, 0x20);
+				write_byte(fin, 0x62FE2, 0x49);
+				write_byte(fin, 0x62FE8, 0x20);
+
+				// Set Coppa Italia to 5/5 (and no restrictions) - no need for fix up for once! Woo!
+				write_byte(fin, 0x1113D2, 0x10);
+				write_byte(fin, 0x1113DA, 0x88);
+
+				// Set SuperCoppa to 5/5 (and no restrictions). Just need to change the Used
+				write_byte(fin, 0x1144AC, 0x5);
+
+				// Money Inflation (x4) Patch
+				write_bytes(fin, 0x81F17, 5, 0xE9, 0xFF, 0xBA, 0x0B, 0x00);
+				write_bytes(fin, 0x13DA1B, 14, 0xD9, 0xE1, 0x83, 0xEC, 0x08, 0xD8, 0xC0, 0xD8, 0xC0, 0xE9, 0xF3, 0x44, 0xF4, 0xFF);
+				write_bytes(fin, 0x822A3, 5, 0xE9, 0x81, 0xB7, 0x0B, 0x00);
+				write_bytes(fin, 0x13DA29, 14, 0xD9, 0xE1, 0x83, 0xEC, 0x08, 0xD8, 0xC0, 0xD8, 0xC0, 0xE9, 0x71, 0x48, 0xF4, 0xFF);
+
+				// Stop Work Permit Rejection
+				write_byte(fin, 0xE5BB2, 0xEB);
+
+				// Ensure Work Permits always renew
+				write_bytes(fin, 0xC8EEC, 6, 0xE9, 0x9A, 0x00, 0x00, 0x00, 0x90);
+
+           }
 	       else
 	       {
-			printf("Cannot detect CM2.exe version!");
-			fclose(fin);
-			return -1;
+				printf("Cannot detect CM2 exe version!");
+				fclose(fin);
+				return -1;
 	       }
-	       printf("Version %.02f detected.\n\nYear changed to %d!\n(underlying year: %d - year shift: +%d)\n", version, year, 1900+real_year, real_year-96);
+	       printf("Version %.02f detected.\n\nYear changed to %d!\n(underlying year: %d)\n", version, year, 1900+real_year);
 	}
 	else
 	{
