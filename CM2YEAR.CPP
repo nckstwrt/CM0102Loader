@@ -109,7 +109,11 @@ int main(int argc, char *argv[])
 	       {
 				// Set the real year it will start from
 				if (year == 2021)
+				{
+					// Set year to '97 and Day to Friday (so starts Fri 16th July 2021)
 					real_year = 97;
+					write_byte(fin, 0xAB0EE, 6);
+				}
 				else
 					real_year = 97 + ((year - 1997) % 4);
 				write_byte(fin, 0xAB085, real_year);
@@ -167,11 +171,10 @@ int main(int argc, char *argv[])
 				write_byte(fin, 0x152CA2, 0xF8);
 				write_byte(fin, 0x152F12, 0xF8);
 
-				// Change name to right year (decided against this in the end)
-				// fseek(fin, 0x13FD95, SEEK_SET);
-				// fprintf(fin, "%02d-%02d", (year%100), (year%100)+1);
+				// Change name to right year (maybe decide against this in the end)
+				fseek(fin, 0x13FD95, SEEK_SET);
+				fprintf(fin, "%02d-%02d", (year%100), (year%100)+1);
 
-				/*				
 				// Expand the Data Segment
 				write_byte(fin, 0x290C8, 0);
 				write_byte(fin, 0x290C9, 0);
@@ -186,7 +189,10 @@ int main(int argc, char *argv[])
 
 				// Set number of leagues allowed
 				write_byte(fin, 0xAA86C, 0x05);
-				*/
+
+				// Set Charity Shield + FA Cup to have no restrictions
+				write_byte(fin, 0x106EE6, 0x10);
+				write_byte(fin, 0x104228, 0x10);
 
 				// Set Prem Subs to 5/3 (and no restrictions)
 				write_byte(fin, 0x107BF5, 0x5);
@@ -243,6 +249,16 @@ int main(int argc, char *argv[])
 				// Ensure Work Permits always renew
 				write_bytes(fin, 0xC8EEC, 6, 0xE9, 0x9A, 0x00, 0x00, 0x00, 0x90);
 
+				// Teams with a reputation lower 15 don't load a full 32 players ?! Just puts extras on Free Transfer. This fixes it:
+				write_byte(fin, 0x9F2B1, 0x20);
+
+				// Skip Splash Screens (+ Fix Up)
+				write_bytes(fin, 0xA9D7E, 2, 0xEB, 0x6C);
+				write_bytes(fin, 0x3B233, 7, 0x07, 0x00, 0x52, 0x0E, 0x02, 0x78, 0x75);
+
+				// Change their website name
+				fseek(fin, 0x14119C, SEEK_SET);
+				fprintf(fin, "https://www.sigames.com%c", 0);
            }
 	       else
 	       {
