@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 float detect_version(FILE *fin)
 {
@@ -32,6 +33,29 @@ void write_bytes(FILE* fin, long pos, int numberofbytes, ...)
 		putc(va_arg(vl, int), fin);
 
 	va_end(vl);
+}
+
+unsigned char HexCharToVal(char c)
+{
+	 if (c >= '0' && c <= '9') 
+		 c -= '0';
+     else if (c >= 'a' && c <='f') 
+		 c -= ('a' - 10);
+     else if (c >= 'A' && c <='F') 
+		 c -= ('A' - 10);    
+	 return (unsigned)c;
+}
+
+
+void write_bytes(FILE* fin, long pos, const char *patch)
+{
+	fseek(fin, pos, SEEK_SET);
+	int len = strlen(patch);
+	for (int i = 0; i < len; i+=2)
+	{
+		unsigned char byte = (HexCharToVal(patch[i]) << 4) | HexCharToVal(patch[i+1]);
+		putc(byte, fin);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -259,6 +283,13 @@ int main(int argc, char *argv[])
 				// Change their website name
 				fseek(fin, 0x14119C, SEEK_SET);
 				fprintf(fin, "https://www.sigames.com%c", 0);
+
+				// Coloured Attributes Patch
+				write_bytes(fin, 0xC4EDB, "E9DF890700");		// Jump
+				//write_bytes(fin, 0x13D8BF, "89C3E89244F4FFBA060000008A4D760FB69B8AB82700909093E91976F8FF9080A3A3A3A4A591919190908F8F8F8A8B8C8D878685858585858585858585858585858585858585");  // 1st Colors Attempt
+				//write_bytes(fin, 0x13D8BF, "89C3E89244F4FFBA060000008A4D760FB69B8AB82700909093E91976F8FF9080A6A6A6A5A5A5A5A4A4A4A4A3A3A3828282828281858585858585858585858585858585858585");  // Greyscale Colors
+				write_bytes(fin, 0x13D8BF, "89C3E89244F4FFBA060000008A4D760FB69B8AB82700909093E91976F8FF9080A6A6A6A6A5A5A4A4A392929292928C8C8B8B8A85858585858585858585858585858585858585");  // 2nd Colors Attempt
+
            }
 	       else
 	       {
