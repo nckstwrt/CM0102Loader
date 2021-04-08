@@ -284,11 +284,30 @@ int main(int argc, char *argv[])
 				fseek(fin, 0x14119C, SEEK_SET);
 				fprintf(fin, "https://www.sigames.com%c", 0);
 
+				// Change the World Cup hosts to Qatar for 2021 and Germany for Euro 2024
+				if (year == 2021)
+				{
+					fseek(fin, 0x145BD4, SEEK_SET);
+					fprintf(fin, "Qatar%c", 0);
+
+					fseek(fin, 0x145BDC, SEEK_SET);
+					fprintf(fin, "Germany");
+				}
+
+				// Update World Cup History
+				write_bytes(fin, 0x52C38, "F81000");	// Point 2018 (last) Host to Russia (FixUp)
+				write_bytes(fin, 0xF8C79, "F8100E");	// Point 2018 (last) Host to Russia
+				write_bytes(fin, 0x52C1D, "6405");		// Point 2018 (last) Winner to France (FixUp)
+				write_bytes(fin, 0xF8C9E, "6405");		// Point 2018 (last) Winner to France
+				write_bytes(fin, 0x52C02, "84");		// Point 2018 (last) Runner-Up to Croatia (FixUp)
+				write_bytes(fin, 0xF8CC3, "84");		// Point 2018 (last) Runner-Up to Croatia 
+				write_bytes(fin, 0xF8CD3, "E90006000090909090");  // Skip the next years
+
 				// Coloured Attributes Patch
 				write_bytes(fin, 0xC4EDB, "E9DF890700");		// Jump
 				//write_bytes(fin, 0x13D8BF, "89C3E89244F4FFBA060000008A4D760FB69B8AB82700909093E91976F8FF9080A3A3A3A4A591919190908F8F8F8A8B8C8D878685858585858585858585858585858585858585");  // 1st Colors Attempt
 				//write_bytes(fin, 0x13D8BF, "89C3E89244F4FFBA060000008A4D760FB69B8AB82700909093E91976F8FF9080A6A6A6A5A5A5A5A4A4A4A4A3A3A3828282828281858585858585858585858585858585858585");  // Greyscale Colors
-				//write_bytes(fin, 0x13D8BF, "89C3E89244F4FFBA060000008A4D760FB69B8AB82700909093E91976F8FF9080A6A6A6A6A5A5A4A4A392929292928C8C8B8B8A85858585858585858585858585858585858585");    // 2nd Colors Attempt
+				//write_bytes(fin, 0x13D8BF, "89C3E89244F4FFBA060000008A4D760FB69B8AB82700909093E91976F8FF9080A6A6A6A6A5A5A4A4A392929292928C8C8B8B8A85858585858585858585858585858585858585");  // 2nd Colors Attempt
 				write_bytes(fin, 0x13D8BF, "89C3E89244F4FF8A4D76E8000000005A2E0FB65C1A12BA0600000093E91676F8FF80A6A6A6A6A5A5A4A4A392929292928C8C8B8B8A858590909090");						   // Using 2nd Colors Attempt but with Position Independent Code
 
            }
