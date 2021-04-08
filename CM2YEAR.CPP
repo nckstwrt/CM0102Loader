@@ -292,16 +292,27 @@ int main(int argc, char *argv[])
 
 					fseek(fin, 0x145BDC, SEEK_SET);
 					fprintf(fin, "Germany");
-				}
+				
 
-				// Update World Cup History
-				write_bytes(fin, 0x52C38, "F81000");	// Point 2018 (last) Host to Russia (FixUp)
-				write_bytes(fin, 0xF8C79, "F8100E");	// Point 2018 (last) Host to Russia
-				write_bytes(fin, 0x52C1D, "6405");		// Point 2018 (last) Winner to France (FixUp)
-				write_bytes(fin, 0xF8C9E, "6405");		// Point 2018 (last) Winner to France
-				write_bytes(fin, 0x52C02, "84");		// Point 2018 (last) Runner-Up to Croatia (FixUp)
-				write_bytes(fin, 0xF8CC3, "84");		// Point 2018 (last) Runner-Up to Croatia 
-				write_bytes(fin, 0xF8CEE, "E9E5050000");  // Skip the next years
+					// Update World Cup History
+					write_bytes(fin, 0x52C38, "F81000");	// Point 2018 (last) Host to Russia (FixUp)
+					write_bytes(fin, 0xF8C79, "F8100E");	// Point 2018 (last) Host to Russia
+					write_bytes(fin, 0x52C1D, "6405");		// Point 2018 (last) Winner to France (FixUp)
+					write_bytes(fin, 0xF8C9E, "6405");		// Point 2018 (last) Winner to France
+					write_bytes(fin, 0x52C02, "84");		// Point 2018 (last) Runner-Up to Croatia (FixUp)
+					write_bytes(fin, 0xF8CC3, "84");		// Point 2018 (last) Runner-Up to Croatia 
+					write_bytes(fin, 0xF8CEE, "E9E5050000");  // Skip the next years
+
+					// Update Euros History
+					write_bytes(fin, 0xFBF07, "5C");		// Set the first one to 1996 (so it will be 2016)
+					write_bytes(fin, 0x547F5, "6405");		// Set host to France (FixUp)
+					write_bytes(fin, 0xFBF1B, "6405");		// Set host to France
+					write_bytes(fin, 0x547DA, "D45100");	// Set Winner to Portugal (FixUp)
+					write_bytes(fin, 0xFBF3F, "D45100");	// Set Winner to Portugal
+					write_bytes(fin, 0x547BF, "6405");		// Set Runners-Up to France (FixUp)
+					write_bytes(fin, 0xFBF64, "6405");		// Set Runners-Up to France 
+					write_bytes(fin, 0xFBF89, "E99904");    // Skip the next years
+				}
 
 				// Coloured Attributes Patch
 				write_bytes(fin, 0xC4EDB, "E9DF890700");		// Jump
