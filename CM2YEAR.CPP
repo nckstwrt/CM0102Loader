@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 				write_bytes(fin, 0xF8C9E, "6405");		// Point 2018 (last) Winner to France
 				write_bytes(fin, 0x52C02, "84");		// Point 2018 (last) Runner-Up to Croatia (FixUp)
 				write_bytes(fin, 0xF8CC3, "84");		// Point 2018 (last) Runner-Up to Croatia 
-				write_bytes(fin, 0xF8CD3, "E90006000090909090");  // Skip the next years
+				write_bytes(fin, 0xF8CEE, "E9E5050000");  // Skip the next years
 
 				// Coloured Attributes Patch
 				write_bytes(fin, 0xC4EDB, "E9DF890700");		// Jump
