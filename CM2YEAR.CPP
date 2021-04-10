@@ -312,6 +312,12 @@ int main(int argc, char *argv[])
 					write_bytes(fin, 0x547BF, "6405");		// Set Runners-Up to France (FixUp)
 					write_bytes(fin, 0xFBF64, "6405");		// Set Runners-Up to France 
 					write_bytes(fin, 0xFBF89, "E99904");    // Skip the next years
+
+					// Change Header Colour (I always really hated the Green and Yellow)
+					write_byte(fin, 0xA9CFC, 0x81);	// White writing
+					write_byte(fin, 0xA9D03, 0x87);	// Darkish Red banner
+					write_byte(fin, 0x7A0A0, 0x81);	// White writing
+					write_byte(fin, 0x7A0A5, 0x87);	// Darkish Red banner
 				}
 
 				// Coloured Attributes Patch
