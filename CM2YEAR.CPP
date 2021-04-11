@@ -315,9 +315,9 @@ int main(int argc, char *argv[])
 
 					// Change Header Colour (I always really hated the Green and Yellow)
 					write_byte(fin, 0xA9CFC, 0x81);	// White writing
-					write_byte(fin, 0xA9D03, 0x87);	// Darkish Red banner
+					write_byte(fin, 0xA9D03, 0x9D);	// Dark Blue banner
 					write_byte(fin, 0x7A0A0, 0x81);	// White writing
-					write_byte(fin, 0x7A0A5, 0x87);	// Darkish Red banner
+					write_byte(fin, 0x7A0A5, 0x9D);	// Dark Blue banner
 				}
 
 				// Coloured Attributes Patch
