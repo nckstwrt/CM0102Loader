@@ -295,6 +295,21 @@ int main(int argc, char *argv[])
 				// Set SuperCoppa to 5/5 (and no restrictions). Just need to change the Used
 				write_byte(fin, 0x1144AC, 0x5);
 
+				// Set Italian Competition Banners to blue and white (rather than purple and yellow ?!)
+				write_byte(fin, 0x01113EC, 0x81);
+				write_byte(fin, 0x01113F1, 0x9D);
+				write_byte(fin, 0x0112104, 0x81);
+				write_byte(fin, 0x0112109, 0x9D);
+				write_byte(fin, 0x0112480, 0x81);
+				write_byte(fin, 0x0112485, 0x9D);
+				write_byte(fin, 0x011285E, 0x81);
+				write_byte(fin, 0x0112876, 0x9D);
+				write_byte(fin, 0x0113886, 0x81);
+				write_byte(fin, 0x011389E, 0x9D);
+				write_byte(fin, 0x01143CA, 0x9D);
+				write_byte(fin, 0x01143E2, 0x81);
+				write_byte(fin, 0x01144CA, 0x81);
+
 				// Money Inflation (x4) Patch
 				write_bytes(fin, 0x81F17, 5, 0xE9, 0xFF, 0xBA, 0x0B, 0x00);
 				write_bytes(fin, 0x13DA1B, 14, 0xD9, 0xE1, 0x83, 0xEC, 0x08, 0xD8, 0xC0, 0xD8, 0xC0, 0xE9, 0xF3, 0x44, 0xF4, 0xFF);
@@ -306,8 +321,9 @@ int main(int argc, char *argv[])
 				write_bytes(fin, 0x72DD5, 4, 0xB3, 0x09, 0x02, 0x20);
 				write_bytes(fin, 0x8719E, 5, 0xE8, 0x94, 0x68, 0x0B, 0x00); // Do the new call for attendances
 				write_bytes(fin, 0xDEE84, 5, 0xE8, 0xAE, 0xEB, 0x05, 0x00); // Do the new call for Average Attendance screen
-				write_bytes(fin, 0x94075, 5, 0xE8, 0xBD, 0x99, 0x0A, 0x00); // Do the new call for %s v %s
-				write_bytes(fin, 0x94199, 5, 0xE8, 0x99, 0x98, 0x0A, 0x00); // Do the new call for %s v %s
+				write_bytes(fin, 0x94075, 5, 0xE8, 0xBD, 0x99, 0x0A, 0x00); // Do the new call for %s v %s (general info for a team)
+				write_bytes(fin, 0x94199, 5, 0xE8, 0x99, 0x98, 0x0A, 0x00); // Do the new call for %s v %s (general info for a team)
+				write_bytes(fin, 0x942C1, 5, 0xE8, 0x71, 0x97, 0x0A, 0x00); // Do the new call for average attendance  (general info for a team)
 				write_bytes(fin, 0x9319F, 5, 0xE8, 0x93, 0xA8, 0x0A, 0x00); // Do the new call for "The attendance of %s in the %s match at"...
 				write_bytes(fin, 0x932D4, 5, 0xE8, 0x5E, 0xA7, 0x0A, 0x00); // Do the new call for "The attendance of %s in the %s match at"...
 				write_bytes(fin, 0x933F5, 5, 0xE8, 0x3D, 0xA6, 0x0A, 0x00); // Do the new call for "The average home attendance this season"...
@@ -386,7 +402,7 @@ int main(int argc, char *argv[])
 				write_byte(fin, 0x7CB62, 0xA6);
 				write_byte(fin, 0x7CD6F, 0xA6);
 				write_byte(fin, 0x7CF35, 0xA6); // <--- charlemaagne9798 found this one
-				write_byte(fin, 0x7D0C5, 0xA6); // <--- charlemaagne9798 found this one
+				write_byte(fin, 0x7D173, 0xA6); // <--- charlemaagne9798 found this one
 
 				// Remove Board & FA Confidence Button
 				write_byte(fin, 0x75957, 0x08);
@@ -394,6 +410,8 @@ int main(int argc, char *argv[])
 				fseek(fin, 0x13FEB7, SEEK_SET);
 				fprintf(fin, "Save Game%c", 0);
 				*/
+
+
            }
 	       else
 	       {
