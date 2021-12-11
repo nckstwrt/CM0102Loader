@@ -395,6 +395,11 @@ int main(int argc, char *argv[])
 				write_byte(fin, 0xC310B, 0x05);
 				write_byte(fin, 0xC3142, 0x05);
 
+				// Sometimes get a weird crash saying Football Writers - this tries to ignore it
+				// This only happens (AFAIK) when you create a new game, quit without saving, load it back up, add a manager and then click Done.
+				// ^ If you do this - it will still crash as it tries to update like it's the end of a season
+				write_bytes(fin, 0x8DFD8, "E92B0200009090");
+
 				/*
 				// Make the buttons have a grey outline rather than blue
 				write_byte(fin, 0x7C676, 0xA6);
