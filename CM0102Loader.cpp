@@ -471,9 +471,7 @@ void ApplyPatchFile(HANDLE hProcess, char *szPatchFile)
 		while (true)
 		{
 			bytesRead = fread(&lineBuffer[bytePtr], 1, 1, fin);
-			if (bytesRead == 0)
-				break;
-			if (lineBuffer[bytePtr] == 0xa)
+			if (bytesRead == 0 || lineBuffer[bytePtr] == 0xa)
 			{
 				lineBuffer[bytePtr] = 0;
 				if (bytePtr > 0 && lineBuffer[0] >= '0' && lineBuffer[0] <= '9')
@@ -489,6 +487,9 @@ void ApplyPatchFile(HANDLE hProcess, char *szPatchFile)
 			}
 			else
 				bytePtr++;
+
+			if (bytesRead == 0)
+				break;
 		}
 
 		fclose(fin);
