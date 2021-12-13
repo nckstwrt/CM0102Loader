@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "resource.h"
 
+const DWORD ExpandedExeSize = 0x8DC000;
+
 class HexPatch
 {
 public:
@@ -282,7 +284,13 @@ public:
 void WriteByte(HANDLE hProcess, DWORD addr, BYTE b)
 {
 	DWORD bytesWritten;
-	WriteProcessMemory(hProcess, (void*)(0x400000+addr), &b, 1, &bytesWritten);
+	DWORD base = 0x400000;
+	if (addr >= 0x6DC000)
+	{
+		base = 0xDE7000;
+		addr -= 0x6DC000;
+	}
+	WriteProcessMemory(hProcess, (void*)(base+addr), &b, 1, &bytesWritten);
 }
 
 void WriteWord(HANDLE hProcess, DWORD addr, WORD w)
@@ -327,6 +335,22 @@ void ApplyPatch(HANDLE hProcess, HexPatch* patch[], int count)
 	for (int i = 0; i < count; i++)
 	{
 		ApplyPatch(hProcess, patch[i]);
+	}
+}
+
+void ApplyPatch(BYTE *pFileBuffer, HexPatch* patch[], int count)
+{
+	for (int i = 0; i < count; i++)
+	{
+		char hexTemp[3];
+		hexTemp[2] = 0;
+		for (unsigned int j = 0; j < strlen(patch[i]->hex); j+=2)
+		{
+			hexTemp[0] = patch[i]->hex[j]; 
+			hexTemp[1] = patch[i]->hex[j+1]; 
+			BYTE byte = (BYTE)strtol(hexTemp, NULL, 16);
+			pFileBuffer[patch[i]->offset+(j/2)] = byte;
+		}
 	}
 }
 
@@ -536,6 +560,116 @@ void OutputResourceFile(int ResId, const char *szFileOut)
 	FreeLibrary(hModule);
 }
 
+void EnableDebugPriv()
+{
+    HANDLE hToken;
+    LUID luid;
+    TOKEN_PRIVILEGES tkp;
+ 
+    OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken);
+ 
+    LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &luid);
+ 
+    tkp.PrivilegeCount = 1;
+    tkp.Privileges[0].Luid = luid;
+    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+ 
+    AdjustTokenPrivileges(hToken, false, &tkp, sizeof(tkp), NULL, NULL);
+ 
+    CloseHandle(hToken);
+}
+
+// https://groups.google.com/g/comp.os.ms-windows.programmer.win32/c/Md3GKPc279A/m/Ax3bYgXhpD8J
+ULONG protect(ULONG characteristics)
+{
+	static const ULONG mapping[] = { PAGE_NOACCESS, PAGE_EXECUTE, PAGE_READONLY, PAGE_EXECUTE_READ, PAGE_READWRITE, PAGE_EXECUTE_READWRITE, PAGE_READWRITE, PAGE_EXECUTE_READWRITE };
+	return mapping[characteristics >> 29];
+}
+
+BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION *pi)
+{
+	BOOL bRet = FALSE;
+
+	// Patch to add extra storage to the exe
+	HexPatch* addextraspaceheader[] = { new HexPatch(254, "05"), new HexPatch(330, "be"), new HexPatch(504, "0060"), new HexPatch(544, "000002"), new HexPatch(584, "00e0"), new HexPatch(624, "0020"), new HexPatch(656, "2e6e69636b"), new HexPatch(666, "20"), new HexPatch(669, "709e"), new HexPatch(674, "20"), new HexPatch(677, "c06d"), new HexPatch(692, "200000e0") };
+
+	// Load up ZwUnmapViewOfSection function from ntdll.dll
+    typedef unsigned long (__stdcall *pfZwUnmapViewOfSection)(HANDLE, PVOID);   
+    pfZwUnmapViewOfSection ZwUnmapViewOfSection = NULL;   
+    HMODULE m = LoadLibrary(TEXT("ntdll.dll"));
+	if (m != NULL)
+	{
+		ZwUnmapViewOfSection = (pfZwUnmapViewOfSection)GetProcAddress(m, "ZwUnmapViewOfSection");
+
+		if (ZwUnmapViewOfSection != NULL)
+		{
+			// Create suspended cm0102.exe
+			si->cb = sizeof(STARTUPINFO);
+			bRet = CreateProcess(0, szExeName, 0, 0, FALSE, CREATE_SUSPENDED, 0, 0, si, pi);
+
+			if (bRet)
+			{
+				// Get Context and Unmap it (EBX holds the pointer to the PBE(Process Enviroment Block) - https://stackoverflow.com/questions/305203/createprocess-from-memory-buffer)
+				PVOID x; 
+				CONTEXT context = { CONTEXT_INTEGER };
+				GetThreadContext(pi->hThread, &context);
+				ReadProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &x, sizeof(x), 0);
+				ZwUnmapViewOfSection(pi->hProcess, x);
+
+				// Load the cm0102.exe into memory (into a block the size of the expanded cm0102.exe) 
+				HANDLE hFile;
+				BYTE *pFileBuffer = new BYTE[ExpandedExeSize];
+				DWORD dwFileSize, bytesRead;
+				hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+				dwFileSize = SetFilePointer(hFile, 0, NULL, SEEK_END);
+				ZeroMemory(pFileBuffer, ExpandedExeSize);
+				SetFilePointer(hFile, 0, NULL, SEEK_SET);
+				ReadFile(hFile, pFileBuffer, dwFileSize, &bytesRead, NULL);
+				CloseHandle(hFile);
+
+				// Apply Expanded EXE patch to the in memory exe
+				ApplyPatch(pFileBuffer, addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*)); 
+				
+				// Start writing the newly patched cm0102.exe into memory
+				PIMAGE_NT_HEADERS nt = PIMAGE_NT_HEADERS(PCHAR(pFileBuffer) + PIMAGE_DOS_HEADER(pFileBuffer)->e_lfanew);
+
+				PVOID q = VirtualAllocEx(pi->hProcess, PVOID(nt->OptionalHeader.ImageBase), nt->OptionalHeader.SizeOfImage, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+				WriteProcessMemory(pi->hProcess, q, pFileBuffer, nt->OptionalHeader.SizeOfHeaders, 0);
+
+				PIMAGE_SECTION_HEADER sect = IMAGE_FIRST_SECTION(nt);
+
+				for (ULONG i = 0; i < nt->FileHeader.NumberOfSections; i++) 
+				{
+					WriteProcessMemory(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, PCHAR(pFileBuffer) + sect[i].PointerToRawData, sect[i].SizeOfRawData, 0);
+
+					ULONG x;
+					VirtualProtectEx(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, sect[i].Misc.VirtualSize, protect(sect[i].Characteristics), &x);
+				}
+
+				// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive)
+				WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E)+1, NULL);
+
+				WriteProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &q, sizeof(q), 0);
+
+				context.Eax = ULONG(q) + nt->OptionalHeader.AddressOfEntryPoint;
+
+				SetThreadContext(pi->hThread, &context);
+
+				// Free up the file buffer
+				delete [] pFileBuffer;
+			}
+		}
+
+		FreeLibrary(m);
+	}
+
+	// Free up the patch and ntdll.dll
+	FreePatch(addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*));
+
+	return bRet;
+}
+
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	Settings settings;
@@ -637,6 +771,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	PROCESS_INFORMATION pi = { 0 };
 	STARTUPINFO si = { 0 };
 	si.cb = sizeof(STARTUPINFO);
+	DWORD size = 7192576;
 
 	// Ensure wherever CM0102Loader.exe is, that is the current directory
 	if (GetModuleFileName(NULL, szEXEDirectory, MAX_PATH) != 0)
@@ -649,13 +784,17 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	{
 		settings.ReadSettings((__argc >= 2 && __argv[1][0] != '-') ?  __argv[1] : NULL);
 
-		BOOL bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+		BOOL bProcess;
+		
+		if (settings.Debug)
+			bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+		else
+			bProcess = CreateExpandedProcess("cm0102.exe", &si, &pi);
   
 		if (bProcess)
 		{
 			DWORD bytesRead, old;
 			BYTE versionBuf[7];
-			DWORD size = 7192576;
 
 			// Unprotect 8mb of memory ready for writing
 			VirtualProtectEx(pi.hProcess, (void*)0x400000, size, PAGE_EXECUTE_READWRITE, &old);
@@ -756,18 +895,17 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				if (settings.DumpEXE != NULL && strlen(settings.DumpEXE) > 0)
 				{
 					CopyFile("CM0102.exe", settings.DumpEXE, FALSE);
-					FILE *fout = fopen(settings.DumpEXE, "r+b");
+					FILE *fout = fopen(settings.DumpEXE, "wb");
 					if (fout)
 					{
-						const int exeSize = 0x6DA00D; // The last set of bytes don't dump - unsure why. So will dump those that do.
-						BYTE *DumpBuffer = new BYTE[exeSize];
-						ReadProcessMemory(pi.hProcess, (void*)(0x400000), DumpBuffer, exeSize, &bytesRead);
-						fwrite(DumpBuffer, exeSize, 1, fout);
+						BYTE *DumpBuffer = new BYTE[ExpandedExeSize];
+						ReadProcessMemory(pi.hProcess, (void*)(0x400000), DumpBuffer, ExpandedExeSize, &bytesRead);
+						fwrite(DumpBuffer, bytesRead, 1, fout);
 						delete [] DumpBuffer;
 						fclose(fout);
 					}
 					else
-						MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot patch!", "CM0102Loader Error", MB_ICONEXCLAMATION);
+						MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot dump!", "CM0102Loader Error", MB_ICONEXCLAMATION);
 				}
 
 				// Apply any patch files manually added in the commandline
@@ -842,7 +980,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	FreePatch(comphistory_datecalcpatch, sizeof(comphistory_datecalcpatch)/sizeof(HexPatch*));
 	FreePatch(nocd, sizeof(nocd)/sizeof(HexPatch*));
 	FreePatch(uncap20s, sizeof(uncap20s)/sizeof(HexPatch*));
-
+	FreePatch(positionintacticsview, sizeof(positionintacticsview)/sizeof(HexPatch*));
+	
 	CloseHandle(pi.hThread);
 	CloseHandle(pi.hProcess);
 
