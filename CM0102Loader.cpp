@@ -670,7 +670,7 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 	// Failed to load the process so try to load the normal way
 	if (!bRet)
 	{
-		bRet = CreateProcess(szExeName, NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+		bRet = CreateProcess(szExeName, NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, si, pi);
 	}
 
 	// Free up the patch and ntdll.dll
