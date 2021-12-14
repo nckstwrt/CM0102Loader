@@ -608,7 +608,7 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 		if (ZwUnmapViewOfSection != NULL)
 		{
 			// Create suspended cm0102.exe
-			bRet = CreateProcess(0, szExeName, 0, 0, FALSE, CREATE_SUSPENDED, 0, 0, si, pi);
+			bRet = CreateProcess(szExeName, NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, si, pi);
 
 			if (bRet)
 			{
@@ -642,16 +642,15 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 
 				PIMAGE_SECTION_HEADER sect = IMAGE_FIRST_SECTION(nt);
 
+				ULONG oldProtect;
 				for (ULONG i = 0; i < nt->FileHeader.NumberOfSections; i++) 
 				{
 					WriteProcessMemory(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, PCHAR(pFileBuffer) + sect[i].PointerToRawData, sect[i].SizeOfRawData, 0);
-
-					ULONG x;
-					VirtualProtectEx(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, sect[i].Misc.VirtualSize, protect(sect[i].Characteristics), &x);
+					VirtualProtectEx(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, sect[i].Misc.VirtualSize, protect(sect[i].Characteristics), &oldProtect);
 				}
 
-				// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive)
-				WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E)+1, NULL);
+				// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive) - however, writing this in - tends to break the running exe ??
+				//WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E), NULL);
 
 				WriteProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &q, sizeof(q), 0);
 
@@ -948,7 +947,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 				}
 				else
+				{
 					ResumeThread(pi.hThread);
+				}
 			}
 			else
 				MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot patch!", "CM0102Loader Error", MB_ICONEXCLAMATION);
