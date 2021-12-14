@@ -650,7 +650,7 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 				}
 
 				// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive) - however, writing this in - tends to break the running exe ??
-				//WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E), NULL);
+				//WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E)+1, NULL);
 
 				WriteProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &q, sizeof(q), 0);
 
@@ -773,7 +773,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 							new HexPatch(4963058, "9090"), new HexPatch(4963077, "00"), new HexPatch(4963079, "2a"), new HexPatch(5256098, "9090"), new HexPatch(5256117, "00"), new HexPatch(5256119, "2a"), 
 							new HexPatch(5296550, "9090"), new HexPatch(5296569, "00"), new HexPatch(5296571, "2a"), new HexPatch(5383934, "9090"), new HexPatch(5383953, "00"), new HexPatch(5383955, "2a") };
 	HexPatch* uncap20s[] = { new HexPatch(0x143624, "9090"), new HexPatch(0x1440B5, "9090"), new HexPatch(0x144357, "9090"), new HexPatch(0x1443E1, "9090"), new HexPatch(0x144471, "9090"), new HexPatch(0x40807C, "9090") };
-	HexPatch* positionintacticsview[] = { new HexPatch(4825080, "0c"), new HexPatch(4825090, "04"), new HexPatch(4825095, "00"), new HexPatch(4825100, "39"), new HexPatch(4825105, "12"), new HexPatch(4825110, "15"), new HexPatch(4825115, "0b"), new HexPatch(4825120, "03"), new HexPatch(4836405, "d2"), new HexPatch(4837381, "027f"), new HexPatch(4837447, "8b0d7e31ae00740666b9ffff9090516a016a01"), new HexPatch(4837467, "006a01556a0653b95044b700e89470f6ff8a44241b3c01900f84df"), new HexPatch(6864332, "3e0020202020202020202063617074") };
+	HexPatch* positionintacticsview[] = { new HexPatch(4825080, "0c"), new HexPatch(4825090, "04"), new HexPatch(4825095, "00"), new HexPatch(4825100, "39"), new HexPatch(4825105, "12"), new HexPatch(4825110, "15"), new HexPatch(4825115, "0b"), new HexPatch(4825120, "03"), new HexPatch(4836405, "d2"), new HexPatch(4837381, "027f"), new HexPatch(4837447, "8b0d7e31ae00740666b9ffff9090516a016a01"), new HexPatch(4837467, "006a01556a0653b95044b700e89470f6ff8a44241b3c01900f84df"), new HexPatch(6864332, "3e0020202020202020202063617074"), new HexPatch(0x49E03C, "05") };
 
 	char szEXEDirectory[MAX_PATH];
 	PROCESS_INFORMATION pi = { 0 };
@@ -902,7 +902,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				// DumpEXE
 				if (settings.DumpEXE != NULL && strlen(settings.DumpEXE) > 0)
 				{
-					CopyFile("CM0102.exe", settings.DumpEXE, FALSE);
 					FILE *fout = fopen(settings.DumpEXE, "wb");
 					if (fout)
 					{
@@ -910,6 +909,16 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 						ReadProcessMemory(pi.hProcess, (void*)(0x400000), DumpBuffer, ExpandedExeSize, &bytesRead);
 						fwrite(DumpBuffer, bytesRead, 1, fout);
 						delete [] DumpBuffer;
+
+						// HACK: Transfer over the non-copied section from the original exe
+						BYTE buf[(0x006DB236-0x006DA00E)+1];
+						FILE *fOrig = fopen("cm0102.exe", "rb");
+						fseek(fOrig, 0x006DA00E, SEEK_SET);
+						fread(buf, 1, (0x006DB236-0x006DA00E)+1, fOrig);
+						fclose(fOrig);
+						
+						fseek(fout, 0x006DA00E, SEEK_SET);
+						fwrite(buf, 1, (0x006DB236-0x006DA00E)+1, fout);
 						fclose(fout);
 					}
 					else
