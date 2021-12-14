@@ -594,6 +594,9 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 	// Patch to add extra storage to the exe
 	HexPatch* addextraspaceheader[] = { new HexPatch(254, "05"), new HexPatch(330, "be"), new HexPatch(504, "0060"), new HexPatch(544, "000002"), new HexPatch(584, "00e0"), new HexPatch(624, "0020"), new HexPatch(656, "2e6e69636b"), new HexPatch(666, "20"), new HexPatch(669, "709e"), new HexPatch(674, "20"), new HexPatch(677, "c06d"), new HexPatch(692, "200000e0") };
 
+	// Set up params
+	si->cb = sizeof(STARTUPINFO);
+
 	// Load up ZwUnmapViewOfSection function from ntdll.dll
     typedef unsigned long (__stdcall *pfZwUnmapViewOfSection)(HANDLE, PVOID);   
     pfZwUnmapViewOfSection ZwUnmapViewOfSection = NULL;   
@@ -605,7 +608,6 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 		if (ZwUnmapViewOfSection != NULL)
 		{
 			// Create suspended cm0102.exe
-			si->cb = sizeof(STARTUPINFO);
 			bRet = CreateProcess(0, szExeName, 0, 0, FALSE, CREATE_SUSPENDED, 0, 0, si, pi);
 
 			if (bRet)
@@ -663,6 +665,12 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 		}
 
 		FreeLibrary(m);
+	}
+
+	// Failed to load the process so try to load the normal way
+	if (!bRet)
+	{
+		bRet = CreateProcess(szExeName, NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
 	}
 
 	// Free up the patch and ntdll.dll
