@@ -416,6 +416,7 @@ int main(int argc, char *argv[])
 				fprintf(fin, "Save Game%c", 0);
 				*/
 
+				fclose(fin);
 
            }
 	       else
