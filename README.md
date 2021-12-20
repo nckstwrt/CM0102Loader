@@ -1,4 +1,4 @@
-# CM0102Loader v1.9
+# CM0102Loader v1.10
 Loader for Championship Manager 01/02
 
 ## Downloads
@@ -30,7 +30,7 @@ PatchFileDirectory = .
 DataDirectory = data
 Debug = false
 ```
-It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow CM0102 Window Close, Idle Sensitivity and things to make CM0102 more portable (remove memory check, location check, etc))
+It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow CM0102 Window Close, Idle Sensitivity, Show position in the Tactics view and things to make CM0102 more portable (remove memory check, location check, etc))
 
 You can set which .ini file CM0102Loader loads by passing a parameter (e.g." CM0102Loader.exe different_settings.ini"). But by default it will use "CM0102Loader.ini".
 
