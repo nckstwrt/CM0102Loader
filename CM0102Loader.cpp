@@ -3,6 +3,7 @@
 #include "resource.h"
 
 const DWORD ExpandedExeSize = 0x8DC000;
+const DWORD OriginalExeSize = 7192576;
 
 class HexPatch
 {
@@ -26,6 +27,7 @@ public:
 		SpeedMultiplier = 4.0;
 		CurrencyMultiplier = 1.0;
 		ColoredAttributes = true;
+		DisableSplashScreen = true;
 		Debug = false;
 		DisableUnprotectedContracts = true;
 		HideNonPublicBids = true;
@@ -128,6 +130,11 @@ public:
 					if (stricmp(att, "ColouredAttributes") == 0)
 					{
 						ColoredAttributes = (toupper(value[0]) == 'T');
+					}
+					else
+					if (stricmp(att, "DisableSplashScreen") == 0)
+					{
+						DisableSplashScreen = (toupper(value[0]) == 'T');
 					}
 					else
 					if (stricmp(att, "Debug") == 0)
@@ -248,6 +255,7 @@ public:
 				fprintf(fout, "AutoLoadPatchFiles = false\n");
 				fprintf(fout, "PatchFileDirectory = .\n");
 				fprintf(fout, "DataDirectory = data\n");
+				fprintf(fout, "DisableSplashScreen = true\n");
 				fprintf(fout, "Debug = false\n");
 				fclose(fout);
 			}
@@ -262,6 +270,7 @@ public:
 	double SpeedMultiplier;
 	double CurrencyMultiplier;
 	bool ColoredAttributes;
+	bool DisableSplashScreen;
 	bool Debug;
 	bool DisableUnprotectedContracts;
 	bool HideNonPublicBids;
@@ -590,80 +599,92 @@ ULONG protect(ULONG characteristics)
 BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION *pi)
 {
 	BOOL bRet = FALSE;
+	HANDLE hFile;
 
 	// Patch to add extra storage to the exe
 	HexPatch* addextraspaceheader[] = { new HexPatch(254, "05"), new HexPatch(330, "be"), new HexPatch(504, "0060"), new HexPatch(544, "000002"), new HexPatch(584, "00e0"), new HexPatch(624, "0020"), new HexPatch(656, "2e6e69636b"), new HexPatch(666, "20"), new HexPatch(669, "709e"), new HexPatch(674, "20"), new HexPatch(677, "c06d"), new HexPatch(692, "200000e0") };
 
-	// Set up params
-	si->cb = sizeof(STARTUPINFO);
-
-	// Load up ZwUnmapViewOfSection function from ntdll.dll
-    typedef unsigned long (__stdcall *pfZwUnmapViewOfSection)(HANDLE, PVOID);   
-    pfZwUnmapViewOfSection ZwUnmapViewOfSection = NULL;   
-    HMODULE m = LoadLibrary(TEXT("ntdll.dll"));
-	if (m != NULL)
+	// Firstly check the filesize, we don't want to expand an already expanded exe
+	DWORD dwFileSize;
+	hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+	if (hFile != INVALID_HANDLE_VALUE)
 	{
-		ZwUnmapViewOfSection = (pfZwUnmapViewOfSection)GetProcAddress(m, "ZwUnmapViewOfSection");
+		dwFileSize = GetFileSize(hFile, NULL);
+		CloseHandle(hFile);
 
-		if (ZwUnmapViewOfSection != NULL)
+		if (dwFileSize == OriginalExeSize)
 		{
-			// Create suspended cm0102.exe
-			bRet = CreateProcess(szExeName, NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, si, pi);
+			// Set up params
+			si->cb = sizeof(STARTUPINFO);
 
-			if (bRet)
+			// Load up ZwUnmapViewOfSection function from ntdll.dll
+			typedef unsigned long (__stdcall *pfZwUnmapViewOfSection)(HANDLE, PVOID);   
+			pfZwUnmapViewOfSection ZwUnmapViewOfSection = NULL;   
+			HMODULE m = LoadLibrary(TEXT("ntdll.dll"));
+			if (m != NULL)
 			{
-				// Get Context and Unmap it (EBX holds the pointer to the PBE(Process Enviroment Block) - https://stackoverflow.com/questions/305203/createprocess-from-memory-buffer)
-				PVOID x; 
-				CONTEXT context = { CONTEXT_INTEGER };
-				GetThreadContext(pi->hThread, &context);
-				ReadProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &x, sizeof(x), 0);
-				ZwUnmapViewOfSection(pi->hProcess, x);
+				ZwUnmapViewOfSection = (pfZwUnmapViewOfSection)GetProcAddress(m, "ZwUnmapViewOfSection");
 
-				// Load the cm0102.exe into memory (into a block the size of the expanded cm0102.exe) 
-				HANDLE hFile;
-				BYTE *pFileBuffer = new BYTE[ExpandedExeSize];
-				DWORD dwFileSize, bytesRead;
-				hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-				dwFileSize = SetFilePointer(hFile, 0, NULL, SEEK_END);
-				ZeroMemory(pFileBuffer, ExpandedExeSize);
-				SetFilePointer(hFile, 0, NULL, SEEK_SET);
-				ReadFile(hFile, pFileBuffer, dwFileSize, &bytesRead, NULL);
-				CloseHandle(hFile);
-
-				// Apply Expanded EXE patch to the in memory exe
-				ApplyPatch(pFileBuffer, addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*)); 
-				
-				// Start writing the newly patched cm0102.exe into memory
-				PIMAGE_NT_HEADERS nt = PIMAGE_NT_HEADERS(PCHAR(pFileBuffer) + PIMAGE_DOS_HEADER(pFileBuffer)->e_lfanew);
-
-				PVOID q = VirtualAllocEx(pi->hProcess, PVOID(nt->OptionalHeader.ImageBase), nt->OptionalHeader.SizeOfImage, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-				WriteProcessMemory(pi->hProcess, q, pFileBuffer, nt->OptionalHeader.SizeOfHeaders, 0);
-
-				PIMAGE_SECTION_HEADER sect = IMAGE_FIRST_SECTION(nt);
-
-				ULONG oldProtect;
-				for (ULONG i = 0; i < nt->FileHeader.NumberOfSections; i++) 
+				if (ZwUnmapViewOfSection != NULL)
 				{
-					WriteProcessMemory(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, PCHAR(pFileBuffer) + sect[i].PointerToRawData, sect[i].SizeOfRawData, 0);
-					VirtualProtectEx(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, sect[i].Misc.VirtualSize, protect(sect[i].Characteristics), &oldProtect);
+					// Create suspended cm0102.exe
+					bRet = CreateProcess(szExeName, NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, si, pi);
+
+					if (bRet)
+					{
+						// Get Context and Unmap it (EBX holds the pointer to the PBE(Process Enviroment Block) - https://stackoverflow.com/questions/305203/createprocess-from-memory-buffer)
+						PVOID x; 
+						CONTEXT context = { CONTEXT_INTEGER };
+						GetThreadContext(pi->hThread, &context);
+						ReadProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &x, sizeof(x), 0);
+						ZwUnmapViewOfSection(pi->hProcess, x);
+
+						// Load the cm0102.exe into memory (into a block the size of the expanded cm0102.exe) 
+						BYTE *pFileBuffer = new BYTE[ExpandedExeSize];
+						DWORD dwFileSize, bytesRead;
+						hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+						dwFileSize = SetFilePointer(hFile, 0, NULL, SEEK_END);
+						ZeroMemory(pFileBuffer, ExpandedExeSize);
+						SetFilePointer(hFile, 0, NULL, SEEK_SET);
+						ReadFile(hFile, pFileBuffer, dwFileSize, &bytesRead, NULL);
+						CloseHandle(hFile);
+
+						// Apply Expanded EXE patch to the in memory exe
+						ApplyPatch(pFileBuffer, addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*)); 
+						
+						// Start writing the newly patched cm0102.exe into memory
+						PIMAGE_NT_HEADERS nt = PIMAGE_NT_HEADERS(PCHAR(pFileBuffer) + PIMAGE_DOS_HEADER(pFileBuffer)->e_lfanew);
+
+						PVOID q = VirtualAllocEx(pi->hProcess, PVOID(nt->OptionalHeader.ImageBase), nt->OptionalHeader.SizeOfImage, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+						WriteProcessMemory(pi->hProcess, q, pFileBuffer, nt->OptionalHeader.SizeOfHeaders, 0);
+
+						PIMAGE_SECTION_HEADER sect = IMAGE_FIRST_SECTION(nt);
+
+						ULONG oldProtect;
+						for (ULONG i = 0; i < nt->FileHeader.NumberOfSections; i++) 
+						{
+							WriteProcessMemory(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, PCHAR(pFileBuffer) + sect[i].PointerToRawData, sect[i].SizeOfRawData, 0);
+							VirtualProtectEx(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, sect[i].Misc.VirtualSize, protect(sect[i].Characteristics), &oldProtect);
+						}
+
+						// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive) - however, writing this in - tends to break the running exe ??
+						//WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E)+1, NULL);
+
+						WriteProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &q, sizeof(q), 0);
+
+						context.Eax = ULONG(q) + nt->OptionalHeader.AddressOfEntryPoint;
+
+						SetThreadContext(pi->hThread, &context);
+
+						// Free up the file buffer
+						delete [] pFileBuffer;
+					}
 				}
 
-				// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive) - however, writing this in - tends to break the running exe ??
-				//WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E)+1, NULL);
-
-				WriteProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &q, sizeof(q), 0);
-
-				context.Eax = ULONG(q) + nt->OptionalHeader.AddressOfEntryPoint;
-
-				SetThreadContext(pi->hThread, &context);
-
-				// Free up the file buffer
-				delete [] pFileBuffer;
+				FreeLibrary(m);
 			}
 		}
-
-		FreeLibrary(m);
 	}
 
 	// Failed to load the process so try to load the normal way
@@ -793,7 +814,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		settings.ReadSettings((__argc >= 2 && __argv[1][0] != '-') ?  __argv[1] : NULL);
 
 		BOOL bProcess;
-		
 		if (settings.Debug)
 			bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
 		else
@@ -819,7 +839,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 
 				// Apply Patches
 				ApplyPatch(pi.hProcess, disablecdremove, sizeof(disablecdremove)/sizeof(HexPatch*));
-				ApplyPatch(pi.hProcess, disablesplashscreen, sizeof(disablesplashscreen)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, changeregistrylocation, sizeof(changeregistrylocation)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, memorycheckfix, sizeof(memorycheckfix)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, allowclosewindow, sizeof(allowclosewindow)/sizeof(HexPatch*));
@@ -827,6 +846,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 				ApplyPatch(pi.hProcess, idlesensitivity, sizeof(idlesensitivity)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, idlesensitivitytransferscreen, sizeof(idlesensitivitytransferscreen)/sizeof(HexPatch*));
 				ApplyPatch(pi.hProcess, positionintacticsview, sizeof(positionintacticsview)/sizeof(HexPatch*));
+
+				if (settings.DisableSplashScreen)
+					ApplyPatch(pi.hProcess, disablesplashscreen, sizeof(disablesplashscreen)/sizeof(HexPatch*));
 			
 				if (settings.ColoredAttributes)
 					ApplyPatch(pi.hProcess, colouredattributes, sizeof(colouredattributes)/sizeof(HexPatch*));
@@ -915,10 +937,21 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 						FILE *fOrig = fopen("cm0102.exe", "rb");
 						fseek(fOrig, 0x006DA00E, SEEK_SET);
 						fread(buf, 1, (0x006DB236-0x006DA00E)+1, fOrig);
-						fclose(fOrig);
-						
 						fseek(fout, 0x006DA00E, SEEK_SET);
 						fwrite(buf, 1, (0x006DB236-0x006DA00E)+1, fout);
+
+						// HACK2: If Original Exe was expanded manually copy over those bits
+						fseek(fOrig, 0, SEEK_END);
+						if (ftell(fOrig) == ExpandedExeSize)
+						{
+							BYTE *buf2 = new BYTE[2*1024*1024];
+							fseek(fOrig, 0x00006DC000, SEEK_SET);
+							fread(buf2, 1, 2*1024*1024, fOrig);
+							fseek(fout, 0x00006DC000, SEEK_SET);
+							fwrite(buf2, 1, 2*1024*1024, fout);
+							delete buf2;
+						}
+						fclose(fOrig);
 						fclose(fout);
 					}
 					else
