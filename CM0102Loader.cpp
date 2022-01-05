@@ -699,6 +699,19 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 	return bRet;
 }
 
+void SetXP3Compatibility(const char *szExeFullPath)
+{
+	int success;
+	HKEY layers;
+	const char *szCompatFlags = "~ DWM8And16BitMitigation RUNASADMIN WINXPSP3";
+	success = RegCreateKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", 0, NULL, 0, KEY_ALL_ACCESS | 0x0100 /*KEY_WOW64_64KEY*/, NULL, &layers, NULL);
+	if (success == ERROR_SUCCESS)
+	{
+		success = RegSetValueExA(layers, (LPCSTR)szExeFullPath, 0, REG_SZ, (CONST BYTE*)szCompatFlags, strlen(szCompatFlags)+1);
+		RegCloseKey(layers);
+	}
+}
+
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	Settings settings;
@@ -807,6 +820,11 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	{
 		*strrchr(szEXEDirectory, '\\') = 0;
 		SetCurrentDirectory(szEXEDirectory);
+
+		// Set XP3 Compatibility on the exe
+		char szFullExePath[MAX_PATH];
+		sprintf(szFullExePath, "%s\\cm0102.exe", szEXEDirectory);
+		SetXP3Compatibility(szFullExePath);
 	}
 
 	if (GetFileAttributes("cm0102.exe") != -1L)
