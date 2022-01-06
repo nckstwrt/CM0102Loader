@@ -1,4 +1,4 @@
-# CM0102Loader v1.10
+# CM0102Loader v1.11
 Loader for Championship Manager 01/02
 
 ## Downloads
@@ -28,6 +28,7 @@ ChangeTo1280x800 = false
 AutoLoadPatchFiles = false
 PatchFileDirectory = .
 DataDirectory = data
+DisableSplashScreen = true
 Debug = false
 ```
 It also applies some patches by default that you cannot manipulate (these are Disable Remove CD Message, Remove Splash Screen, Allow CM0102 Window Close, Idle Sensitivity, Show position in the Tactics view and things to make CM0102 more portable (remove memory check, location check, etc))
