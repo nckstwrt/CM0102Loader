@@ -43,10 +43,11 @@ public:
 		strcpy(PatchFileDirectory, ".");
 		strcpy(DataDirectory, "data");
 		NoCD = false;
+		DontExpandExe = false;
 		strcpy(DumpEXE, "");
 	}
 
-	int ReadLine(FILE *fin, char *szAttribute, char *szValue)
+	int ReadLine(FILE *fin, char *szAttribute, char *szValue, bool *gotEOF)
 	{
 		int Ret = 0;
 		char szBuffer[100+MAX_PATH];
@@ -54,14 +55,10 @@ public:
 		while (true)
 		{
 			int c = getc(fin);
-			if (c == EOF)
+			if (c == '\n' || c == EOF)
 			{
-				Ret = -1;
-				szBuffer[ptr] = 0;
-				break;
-			}
-			if (c == '\n')
-			{
+				if (c == EOF && gotEOF != NULL)
+					*gotEOF = true;
 				szBuffer[ptr] = 0;
 				break;
 			}
@@ -115,10 +112,8 @@ public:
 			
 			while (true)
 			{
-				int ok = ReadLine(fin, att, value);
-
-				if (ok == -1)
-					break;
+				bool gotEOF = false;
+				int ok = ReadLine(fin, att, value, &gotEOF);
 
 				if (ok == 1)
 				{
@@ -212,6 +207,11 @@ public:
 						NoCD = (toupper(value[0]) == 'T');
 					}
 					else
+					if (stricmp(att, "DontExpandExe") == 0)
+					{
+						DontExpandExe = (toupper(value[0]) == 'T');
+					}
+					else
 					if (stricmp(att, "DumpEXE") == 0)
 					{
 						strcpy(DumpEXE, value);
@@ -229,6 +229,9 @@ public:
 					else
 						MessageBox(0, "CM0102Loader.ini has settings that are not recognised!", "CM0102Loader Error", MB_ICONEXCLAMATION);
 				}
+
+				if (gotEOF)
+					break;
 			}
 
 			fclose(fin);
@@ -286,6 +289,7 @@ public:
 	char PatchFileDirectory[MAX_PATH];
 	char DataDirectory[MAX_PATH];
 	bool NoCD;
+	bool DontExpandExe;
 	char DumpEXE[MAX_PATH];
 };
 
@@ -635,51 +639,55 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 						// Get Context and Unmap it (EBX holds the pointer to the PBE(Process Enviroment Block) - https://stackoverflow.com/questions/305203/createprocess-from-memory-buffer)
 						PVOID x; 
 						CONTEXT context = { CONTEXT_INTEGER };
-						GetThreadContext(pi->hThread, &context);
-						ReadProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &x, sizeof(x), 0);
-						ZwUnmapViewOfSection(pi->hProcess, x);
-
-						// Load the cm0102.exe into memory (into a block the size of the expanded cm0102.exe) 
-						BYTE *pFileBuffer = new BYTE[ExpandedExeSize];
-						DWORD dwFileSize, bytesRead;
-						hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-						dwFileSize = SetFilePointer(hFile, 0, NULL, SEEK_END);
-						ZeroMemory(pFileBuffer, ExpandedExeSize);
-						SetFilePointer(hFile, 0, NULL, SEEK_SET);
-						ReadFile(hFile, pFileBuffer, dwFileSize, &bytesRead, NULL);
-						CloseHandle(hFile);
-
-						// Apply Expanded EXE patch to the in memory exe
-						ApplyPatch(pFileBuffer, addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*)); 
-						
-						// Start writing the newly patched cm0102.exe into memory
-						PIMAGE_NT_HEADERS nt = PIMAGE_NT_HEADERS(PCHAR(pFileBuffer) + PIMAGE_DOS_HEADER(pFileBuffer)->e_lfanew);
-
-						PVOID q = VirtualAllocEx(pi->hProcess, PVOID(nt->OptionalHeader.ImageBase), nt->OptionalHeader.SizeOfImage, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
-						WriteProcessMemory(pi->hProcess, q, pFileBuffer, nt->OptionalHeader.SizeOfHeaders, 0);
-
-						PIMAGE_SECTION_HEADER sect = IMAGE_FIRST_SECTION(nt);
-
-						ULONG oldProtect;
-						for (ULONG i = 0; i < nt->FileHeader.NumberOfSections; i++) 
+						if (GetThreadContext(pi->hThread, &context) != 0)
 						{
-							WriteProcessMemory(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, PCHAR(pFileBuffer) + sect[i].PointerToRawData, sect[i].SizeOfRawData, 0);
-							VirtualProtectEx(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, sect[i].Misc.VirtualSize, protect(sect[i].Characteristics), &oldProtect);
+							ReadProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &x, sizeof(x), 0);
+							ZwUnmapViewOfSection(pi->hProcess, x);
+
+							// Load the cm0102.exe into memory (into a block the size of the expanded cm0102.exe) 
+							BYTE *pFileBuffer = new BYTE[ExpandedExeSize];
+							DWORD dwFileSize, bytesRead;
+							hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+							dwFileSize = SetFilePointer(hFile, 0, NULL, SEEK_END);
+							ZeroMemory(pFileBuffer, ExpandedExeSize);
+							SetFilePointer(hFile, 0, NULL, SEEK_SET);
+							ReadFile(hFile, pFileBuffer, dwFileSize, &bytesRead, NULL);
+							CloseHandle(hFile);
+
+							// Apply Expanded EXE patch to the in memory exe
+							ApplyPatch(pFileBuffer, addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*)); 
+							
+							// Start writing the newly patched cm0102.exe into memory
+							PIMAGE_NT_HEADERS nt = PIMAGE_NT_HEADERS(PCHAR(pFileBuffer) + PIMAGE_DOS_HEADER(pFileBuffer)->e_lfanew);
+
+							PVOID q = VirtualAllocEx(pi->hProcess, PVOID(nt->OptionalHeader.ImageBase), nt->OptionalHeader.SizeOfImage, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+
+							WriteProcessMemory(pi->hProcess, q, pFileBuffer, nt->OptionalHeader.SizeOfHeaders, 0);
+
+							PIMAGE_SECTION_HEADER sect = IMAGE_FIRST_SECTION(nt);
+
+							ULONG oldProtect;
+							for (ULONG i = 0; i < nt->FileHeader.NumberOfSections; i++) 
+							{
+								WriteProcessMemory(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, PCHAR(pFileBuffer) + sect[i].PointerToRawData, sect[i].SizeOfRawData, 0);
+								VirtualProtectEx(pi->hProcess, PCHAR(q) + sect[i].VirtualAddress, sect[i].Misc.VirtualSize, protect(sect[i].Characteristics), &oldProtect);
+							}
+
+							// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive) - however, writing this in - tends to break the running exe ??
+							//WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E)+1, NULL);
+
+							WriteProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &q, sizeof(q), 0);
+
+							context.Eax = ULONG(q) + nt->OptionalHeader.AddressOfEntryPoint;
+
+							SetThreadContext(pi->hThread, &context);
+
+							// Free up the file buffer
+							delete [] pFileBuffer;
 						}
-
-						// HACK: There's a part that's not getting written: 006DA00E to 006DB236 (inclusive) - however, writing this in - tends to break the running exe ??
-						//WriteProcessMemory(pi->hProcess, (void*)(0x400000 + 0x006DA00E), pFileBuffer + 0x006DA00E, (0x006DB236-0x006DA00E)+1, NULL);
-
-						WriteProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &q, sizeof(q), 0);
-
-						context.Eax = ULONG(q) + nt->OptionalHeader.AddressOfEntryPoint;
-
-						SetThreadContext(pi->hThread, &context);
-
-						// Free up the file buffer
-						delete [] pFileBuffer;
 					}
+					else
+						bRet = false;
 				}
 
 				FreeLibrary(m);
@@ -832,8 +840,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		settings.ReadSettings((__argc >= 2 && __argv[1][0] != '-') ?  __argv[1] : NULL);
 
 		BOOL bProcess;
-		if (settings.Debug)
-			bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, settings.Debug ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+		if (settings.Debug || settings.DontExpandExe)
+			bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, (settings.Debug && !settings.DontExpandExe) ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
 		else
 			bProcess = CreateExpandedProcess("cm0102.exe", &si, &pi);
   
