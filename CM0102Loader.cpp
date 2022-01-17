@@ -600,17 +600,38 @@ ULONG protect(ULONG characteristics)
 	return mapping[characteristics >> 29];
 }
 
-BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION *pi)
+BYTE *CreateExpandedExeInMemory(char *szExeName)
 {
-	BOOL bRet = FALSE;
-	HANDLE hFile;
-
 	// Patch to add extra storage to the exe
 	HexPatch* addextraspaceheader[] = { new HexPatch(254, "05"), new HexPatch(330, "be"), new HexPatch(504, "0060"), new HexPatch(544, "000002"), new HexPatch(584, "00e0"), new HexPatch(624, "0020"), new HexPatch(656, "2e6e69636b"), new HexPatch(666, "20"), new HexPatch(669, "709e"), new HexPatch(674, "20"), new HexPatch(677, "c06d"), new HexPatch(692, "200000e0") };
 
+	// Load the cm0102.exe into memory (into a block the size of the expanded cm0102.exe) 
+	BYTE *pFileBuffer = new BYTE[ExpandedExeSize];
+	DWORD dwFileSize, bytesRead;
+	HANDLE hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+	dwFileSize = SetFilePointer(hFile, 0, NULL, SEEK_END);
+	ZeroMemory(pFileBuffer, ExpandedExeSize);
+	SetFilePointer(hFile, 0, NULL, SEEK_SET);
+	ReadFile(hFile, pFileBuffer, dwFileSize, &bytesRead, NULL);
+	CloseHandle(hFile);
+
+	// Apply Expanded EXE patch to the in memory exe
+	ApplyPatch(pFileBuffer, addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*)); 
+
+	// Free up the patch and ntdll.dll
+	FreePatch(addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*));
+
+	return pFileBuffer;
+}
+
+
+BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION *pi)
+{
+	BOOL bRet = FALSE;
+
 	// Firstly check the filesize, we don't want to expand an already expanded exe
 	DWORD dwFileSize;
-	hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+	HANDLE hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile != INVALID_HANDLE_VALUE)
 	{
 		dwFileSize = GetFileSize(hFile, NULL);
@@ -644,18 +665,7 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 							ReadProcessMemory(pi->hProcess, PCHAR(context.Ebx) + 8, &x, sizeof(x), 0);
 							ZwUnmapViewOfSection(pi->hProcess, x);
 
-							// Load the cm0102.exe into memory (into a block the size of the expanded cm0102.exe) 
-							BYTE *pFileBuffer = new BYTE[ExpandedExeSize];
-							DWORD dwFileSize, bytesRead;
-							hFile = CreateFile(szExeName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-							dwFileSize = SetFilePointer(hFile, 0, NULL, SEEK_END);
-							ZeroMemory(pFileBuffer, ExpandedExeSize);
-							SetFilePointer(hFile, 0, NULL, SEEK_SET);
-							ReadFile(hFile, pFileBuffer, dwFileSize, &bytesRead, NULL);
-							CloseHandle(hFile);
-
-							// Apply Expanded EXE patch to the in memory exe
-							ApplyPatch(pFileBuffer, addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*)); 
+							BYTE *pFileBuffer = CreateExpandedExeInMemory(szExeName);
 							
 							// Start writing the newly patched cm0102.exe into memory
 							PIMAGE_NT_HEADERS nt = PIMAGE_NT_HEADERS(PCHAR(pFileBuffer) + PIMAGE_DOS_HEADER(pFileBuffer)->e_lfanew);
@@ -685,6 +695,14 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 							// Free up the file buffer
 							delete [] pFileBuffer;
 						}
+						else
+						{
+							// We have created the process, but cannot get context, so we should kill it and try another method
+							TerminateProcess(pi->hProcess, 0);
+							CloseHandle(pi->hThread);
+							CloseHandle(pi->hProcess);
+							bRet = false;
+						}
 					}
 					else
 						bRet = false;
@@ -695,14 +713,22 @@ BOOL CreateExpandedProcess(char *szExeName, STARTUPINFO *si, PROCESS_INFORMATION
 		}
 	}
 
-	// Failed to load the process so try to load the normal way
+	// Failed to load the process so try to create an expanded exe manually and load that
 	if (!bRet)
 	{
-		bRet = CreateProcess(szExeName, NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, si, pi);
-	}
+		char *szExeNameToLoad = "cm0102_expanded.exe";
+		// Create an expanded exe manually
+		if (GetFileAttributes(szExeNameToLoad) == -1L)
+		{
+			BYTE *pFileBuffer = CreateExpandedExeInMemory(szExeName);
+			hFile = CreateFile(szExeNameToLoad, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, 0, NULL);
+			WriteFile(hFile, pFileBuffer, ExpandedExeSize, &dwFileSize, NULL);
+			CloseHandle(hFile);
+			delete [] pFileBuffer;
 
-	// Free up the patch and ntdll.dll
-	FreePatch(addextraspaceheader, sizeof(addextraspaceheader)/sizeof(HexPatch*));
+		}
+		bRet = CreateProcess(szExeNameToLoad, NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, si, pi);
+	}
 
 	return bRet;
 }
@@ -821,7 +847,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	PROCESS_INFORMATION pi = { 0 };
 	STARTUPINFO si = { 0 };
 	si.cb = sizeof(STARTUPINFO);
-	DWORD size = 7192576;
+	DWORD size = OriginalExeSize;
 
 	// Ensure wherever CM0102Loader.exe is, that is the current directory
 	if (GetModuleFileName(NULL, szEXEDirectory, MAX_PATH) != 0)
@@ -843,7 +869,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 		if (settings.Debug || settings.DontExpandExe)
 			bProcess = CreateProcess("cm0102.exe", NULL, NULL, NULL, FALSE, (settings.Debug && !settings.DontExpandExe) ? DEBUG_ONLY_THIS_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi);
 		else
+		{
 			bProcess = CreateExpandedProcess("cm0102.exe", &si, &pi);
+			size = ExpandedExeSize;
+		}
   
 		if (bProcess)
 		{
