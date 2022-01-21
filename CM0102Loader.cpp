@@ -983,9 +983,15 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 					if (fout)
 					{
 						BYTE *DumpBuffer = new BYTE[ExpandedExeSize];
-						ReadProcessMemory(pi.hProcess, (void*)(0x400000), DumpBuffer, ExpandedExeSize, &bytesRead);
+
+						// Dump core part
+						ReadProcessMemory(pi.hProcess, (void*)(0x400000), DumpBuffer, OriginalExeSize, &bytesRead);
 						fwrite(DumpBuffer, bytesRead, 1, fout);
-						delete [] DumpBuffer;
+						
+						// Dump added part (always exists now)
+						ReadProcessMemory(pi.hProcess, (void*)(0xDE7000), DumpBuffer, 2 * 1024 * 1024, &bytesRead);
+						fwrite(DumpBuffer, bytesRead, 1, fout);
+						
 
 						// HACK: Transfer over the non-copied section from the original exe
 						BYTE buf[(0x006DB236-0x006DA00E)+1];
@@ -1006,8 +1012,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 							fwrite(buf2, 1, 2*1024*1024, fout);
 							delete buf2;
 						}
+
 						fclose(fOrig);
 						fclose(fout);
+						delete [] DumpBuffer;
 					}
 					else
 						MessageBox(0, "CM0102.exe does not appear to be version 3.9.68! Cannot dump!", "CM0102Loader Error", MB_ICONEXCLAMATION);
