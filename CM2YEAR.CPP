@@ -416,6 +416,29 @@ int main(int argc, char *argv[])
 				fprintf(fin, "Save Game%c", 0);
 				*/
 
+				// Surname patch, to stop some "grey" players not having a surname
+				write_bytes(fin, 0x6cfe5, "ea0c");
+				write_bytes(fin, 0x6cfee, "ea0c");
+				write_bytes(fin, 0x6cff7, "ea");
+				write_bytes(fin, 0xcbf38, "e90cae");
+				write_bytes(fin, 0x126d49, "8038000f848c51faff909090909090909090e8a4bbffffe9d851");
+				write_bytes(fin, 0x126d64, "ff909090909090");
+
+				// Stop International Friendly News Items
+				write_bytes(fin, 0xFE4BD, "9090909090");
+
+				// Fix Belgium not having any prize money
+				write_bytes(fin, 0x72cac, "14"); 
+				write_bytes(fin, 0x72caf, "382d09"); 
+				write_bytes(fin, 0x72cb5, "14"); 
+				write_bytes(fin, 0x72cb8, "382d09"); 
+				write_bytes(fin, 0x72cbe, "14");
+				write_bytes(fin, 0x72cc1, "382d09"); 
+				write_bytes(fin, 0x11d2bd, "e9910002"); 
+				write_bytes(fin, 0x11d2c2, "90"); 
+				write_bytes(fin, 0x13d353, "0f85a203feff83ec04c7"); 
+				write_bytes(fin, 0  x13d35e, "2490d00300db0424dd98382d170083c404e94ffffdff909090");
+
 				fclose(fin);
 
            }
