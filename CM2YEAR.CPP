@@ -276,6 +276,13 @@ int main(int argc, char *argv[])
 				write_byte(fin, 0x5C72D, 0xEC);
 				write_byte(fin, 0x5C736, 0xE4);
 
+				// Set Playoffs to 5/3 Subs (and no restrictions) + Corresponding FixUp Table
+				write_bytes(fin, 0x5b65f, "2c");
+				write_bytes(fin, 0x5b662, "48"); 
+				write_bytes(fin, 0x5b668, "2c");
+				write_bytes(fin, 0x107666, "10");
+				write_bytes(fin, 0x10767d, "66c780482d17000503909090");
+
 				// Set Serie A to 5/5 (and no restrictions) + Corresponding FixUp Table
 				write_bytes(fin, 0x112849, 12, 0x66, 0xC7, 0x80, 0x49, 0x2D, 0x17, 0x00, 0x05, 0x10, 0x90, 0x90, 0x90);
 				write_byte(fin, 0x621C6, 0xF8);
